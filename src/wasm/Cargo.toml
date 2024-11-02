@@ -5,7 +5,7 @@ authors = ["https://github.com/rootofminus1atu"]
 edition = "2021"
 description = "WebAssembly components for ScrapeScribe"
 repository = "https://github.com/SrapeScribe/scraping-instructions.git"
-license = "MIT"
+license = "Proprietary"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

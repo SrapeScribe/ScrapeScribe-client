@@ -1,4 +1,4 @@
-# Web Scraper Tool Frontend
+# ScrapeScribe Frontend
 
 A modern web interface for interactive web scraping and API generation. This frontend application allows users to visually select elements from web pages and generate custom APIs for data extraction.
 
@@ -36,7 +36,7 @@ A modern web interface for interactive web scraping and API generation. This fro
 cargo install wasm-pack
 ```
 
-2. Clone the repository:
+2. Clone the repository (private access required)
 ```bash
 git clone https://github.com/SrapeScribe/client.git
 cd client
@@ -49,7 +49,7 @@ npm install
 
 4. Build the WebAssembly:
 ```bash
-wasm-pack build
+npm run wasm:build
 ```
 
 5. Configure environment variables:
@@ -84,58 +84,21 @@ src/
 └── utils/                # Helper functions
 ```
 
-## 🔧 Configuration
-
-Create a `.env` file with the following variables:
-
-```env
-VITE_API_URL=http://localhost:3000
-VITE_BROWSER_WS_URL=ws://localhost:3001
-```
-
-## 🧪 Running Tests
-
-```bash
-# Unit tests
-npm run test
-
-# E2E tests
-npm run test:e2e
-
-# Coverage report
-npm run test:coverage
-
-# WebAssembly tests
-wasm-pack test --chrome
-```
-
 ## 🔍 Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
+- `npm run dev` - Start development server + build WebAssembly modules
+- `npm run build` - Build for production + build WebAssembly modules
 - `npm run wasm:build` - Build WebAssembly modules
-- `npm run wasm:test` - Run WebAssembly tests
 - `npm run lint` - Run linter
 - `npm run format` - Format code
-- `npm run test` - Run tests
-- `npm run storybook` - Start Storybook for component development
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## 📝 Development Guidelines
 
 - Follow the established code style and formatting rules
-- Write tests for new features
 - Update documentation as needed
 - Use semantic commit messages
 - Keep pull requests focused and manageable in size
-- Ensure WebAssembly modules are properly tested
+- Ensure crucial changes are approved by the team
 
 ## 📚 Documentation
 
@@ -149,8 +112,13 @@ Additional documentation is available in the `docs/` directory:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This software is proprietary. Copyright (c) 2024 MYKYTA VITKOVSKYI.
 
-## 🤝 Support
+### Academic Use
+This software may be viewed and evaluated for educational purposes as part of a student project presentation.
 
-For support, please open an issue in the repository or contact the development team.
+### Commercial and Production Use
+All rights reserved. Unauthorized copying, modification, or distribution is prohibited. See the [LICENSE](LICENSE) file for details.
+
+---
+This is a student project with restricted usage rights. See LICENSE for details.

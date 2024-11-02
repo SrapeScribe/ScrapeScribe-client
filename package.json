@@ -1,11 +1,11 @@
 {
   "name": "client",
   "private": true,
+  "license": "Proprietary",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "wasm:build": "cd src/wasm && wasm-pack build --target web --out-dir ../../pkg",
-    "wasm:watch": "cargo watch -i .gitignore -i 'pkg/*' -s 'cd src/wasm && wasm-pack build --target web --out-dir ../../pkg'",
     "dev": "npm run wasm:build && vite",
     "build": "npm run wasm:build && vite build",
     "preview": "vite preview"
