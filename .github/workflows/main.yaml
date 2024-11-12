@@ -23,12 +23,12 @@ jobs:
       # Step 3: Install dependencies
       - name: Install dependencies
         run: npm install
-        working-directory: ./client
+        working-directory: ../../
 
       # Step 4: Build the website
       - name: Build Website
         run: npm run build
-        working-directory: ./client
+        working-directory: ../../
 
       # Step 5: Configure AWS credentials
       - name: Set AWS credentials
