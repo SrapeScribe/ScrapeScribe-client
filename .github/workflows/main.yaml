@@ -25,7 +25,7 @@ jobs:
         run: npm install
         working-directory: ./
 
-      # Step 4: Install Cargo
+      # Step 4: Install Cargon
       - name: Install cargo
         run: cargo install wasm-pack
         working-directory: ./
