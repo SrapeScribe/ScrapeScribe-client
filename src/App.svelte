@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { greet } from "../pkg/vite_rust_wasm";
+  import { greet } from "../pkg/scraping_instructions";
 </script>
 
 <main>
