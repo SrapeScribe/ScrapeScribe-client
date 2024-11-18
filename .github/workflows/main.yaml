@@ -42,31 +42,27 @@ jobs:
         working-directory: ./
 
       # Step 6: Configure AWS credentials
-      - name: Set AWS credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: 'eu-west-1'
 
-      # Step 7: Sync to S3 with improved S3 sync action
+      # Step 7: Deploy to S3
       - name: Deploy to S3
-        uses: aws-actions/aws-cli@v1
-        with:
-          args: >
-            s3 sync
-            --delete
-            --follow-symlinks
-            --size-only
-            --content-type "text/html; charset=utf-8"
-            ./dist s3://${{ secrets.AWS_S3_BUCKET }}
-            --exclude "*"
-            --include "*.html"
-            --include "*.js"
-            --include "*.css"
-            --include "*.wasm"
-            --include "*.svg"
-            --include "*.png"
-            --include "*.jpg"
-            --include "*.json"
+        run: |
+          aws s3 sync ./dist s3://${{ secrets.AWS_S3_BUCKET }} \
+            --delete \
+            --follow-symlinks \
+            --size-only \
+            --exclude "*" \
+            --include "*.html" \
+            --include "*.js" \
+            --include "*.css" \
+            --include "*.wasm" \
+            --include "*.svg" \
+            --include "*.png" \
+            --include "*.jpg" \
+            --include "*.json" \
             --cache-control "max-age=86400"
