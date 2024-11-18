@@ -12,44 +12,61 @@ jobs:
     steps:
       # Step 1: Checkout the code from the repository
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      # Step 2: Set up Node.js environment
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
+      # Step 2: Setup Bun environment
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '20'
+          bun-version: 'latest'
 
       # Step 3: Install dependencies
       - name: Install dependencies
-        run: npm install
+        run: bun install
         working-directory: ./
 
-      # Step 4: Install Cargo
-      - name: Install cargo
-        run: cargo install wasm-pack
+      # Step 4: Install Cargo and wasm-pack
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
         working-directory: ./
 
       # Step 5: Build the website
       - name: Build Website
-        run: npm run build
+        run: bun run build
         working-directory: ./
 
       # Step 6: Configure AWS credentials
       - name: Set AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: 'eu-west-1'
 
-      # Step 7: Sync only /dir contents to S3
-      - name: Deploy to S3 with MIME types
-        uses: jakejarvis/s3-sync-action@v0.5.1
+      # Step 7: Sync to S3 with improved S3 sync action
+      - name: Deploy to S3
+        uses: aws-actions/aws-cli@v1
         with:
-          args: --follow-symlinks --delete
-        env:
-          SOURCE_DIR: './dist'  # Deploy only the contents of /dir
-          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          args: >
+            s3 sync
+            --delete
+            --follow-symlinks
+            --size-only
+            --content-type "text/html; charset=utf-8"
+            ./dist s3://${{ secrets.AWS_S3_BUCKET }}
+            --exclude "*"
+            --include "*.html"
+            --include "*.js"
+            --include "*.css"
+            --include "*.wasm"
+            --include "*.svg"
+            --include "*.png"
+            --include "*.jpg"
+            --include "*.json"
+            --cache-control "max-age=86400"
