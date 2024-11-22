@@ -1,15 +1,20 @@
 <script lang="ts">
 	import '../app.css';
-	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
-	import AppSidebar from "$lib/components/app-sidebar.svelte";
+	import { Provider } from '$lib/components/ui/sidebar/index.js';
+	import AppSidebar from '$lib/components/app-sidebar.svelte';
+	import Navbar from '$lib/components/navbar.svelte';
 
 	let { children } = $props();
 </script>
 
-<Sidebar.Provider>
+<Provider>
 	<AppSidebar />
-	<main>
-		<Sidebar.Trigger />
-		{@render children?.()}
-	</main>
-</Sidebar.Provider>
+	<div class="flex flex-col w-full">
+
+		<Navbar />
+		<main class="">
+			{@render children?.()}
+		</main>
+	</div>
+
+</Provider>
