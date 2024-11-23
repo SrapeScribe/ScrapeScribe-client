@@ -12,36 +12,96 @@
 		}
 	}: { content?: string, titleText?: string, closeEditor?: () => void; } = $props();
 
-	// Ensure we have at least one line for the editor
-	const lines = $derived(content.split('\n'));
-	const numLines = $derived(Math.max(lines.length, 1));
-
-	let jsonError = $state<string | null>(null);
+	// Editor refs
+	let editorElement: HTMLTextAreaElement;
+	let overlayElement: HTMLDivElement;
 
 	let isFieldView = $state(true);
 	let entries = $state<[string, any][]>([]);
+	let jsonError = $state<string | null>(null);
+	let highlightedContent = $state('');
+	let isValidJson = $state(true);
 
 	function handleClose() {
 		closeEditor();
 	}
 
+	// Handle scroll sync between editor and overlay
+	function handleScroll(e: Event) {
+		if (overlayElement && e.target === editorElement) {
+			overlayElement.scrollTop = editorElement.scrollTop;
+			overlayElement.scrollLeft = editorElement.scrollLeft;
+		}
+	}
+
+	// Syntax highlighting function
+	function highlightJson(code: string): string {
+		if (!code.trim()) {
+			return '';
+		}
+
+		try {
+			// Try to parse with cleaned JSON
+			const cleanContent = code.replace(/,(\s*[}\]])/g, '$1');
+			JSON.parse(cleanContent);
+			isValidJson = true;
+
+			// Always highlight the original code, not the cleaned version
+			return code
+				.replace(
+					/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+					(match) => {
+						let cls = 'text-blue-400'; // numbers
+						if (/^"/.test(match)) {
+							if (/:$/.test(match)) {
+								cls = 'text-purple-400'; // key
+							} else {
+								cls = 'text-green-400'; // string
+							}
+						} else if (/true|false/.test(match)) {
+							cls = 'text-yellow-400'; // boolean
+						} else if (/null/.test(match)) {
+							cls = 'text-red-400'; // null
+						}
+						return `<span class="${cls}">${match}</span>`;
+					}
+				)
+				.replace(/[{}\[\]]/g, (match) => `<span class="text-gray-400">${match}</span>`)
+				.replace(/,/g, (match) => `<span class="text-gray-400">${match}</span>`); // Highlight all commas
+		} catch (e) {
+			isValidJson = false;
+			// Process invalid JSON to still show some basic highlighting
+			return code
+				.replace(
+					/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?)/g,
+					(match) => `<span class="text-white">${match}</span>`
+				)
+				.replace(/([{}\[\],])/g, (match) => `<span class="text-gray-400">${match}</span>`); // Always highlight structural characters
+		}
+	}
+
+	function cleanJsonString(str: string): string {
+		// Remove trailing commas
+		return str.replace(/,(\s*[}\]])/g, '$1');
+	}
 
 	function parseContent() {
 		try {
-			// First validate JSON structure
-			const parsed = JSON.parse(content || '{}');
+			const cleanContent = content.replace(/,(\s*[}\]])/g, '$1');
+			const parsed = JSON.parse(cleanContent || '{}');
 
-			// Additional validation check if it's an object
 			if (typeof parsed !== 'object' || Array.isArray(parsed)) {
 				throw new Error('Content must be a valid JSON object');
 			}
 
 			entries = Object.entries(parsed);
 			jsonError = null;
+			highlightedContent = highlightJson(content); // Use original content for highlighting
 			return true;
 		} catch (e) {
 			jsonError = e instanceof Error ? e.message : 'Invalid JSON format';
 			entries = [];
+			highlightedContent = highlightJson(content);
 			return false;
 		}
 	}
@@ -76,10 +136,13 @@
 		try {
 			content = JSON.stringify(Object.fromEntries(entries), null, 2);
 			jsonError = null;
+			highlightedContent = highlightJson(content);
 		} catch (e) {
 			jsonError = e instanceof Error ? e.message : 'Failed to update JSON';
+			highlightedContent = highlightJson(content);
 		}
 	}
+
 
 	// initial parse
 	$effect(() => {
@@ -87,6 +150,10 @@
 			parseContent();
 		}
 	});
+
+	// Ensure we have at least one line for the editor
+	const lines = $derived(content.split('\n'));
+	const numLines = $derived(Math.max(lines.length, 1));
 </script>
 
 <Card.Root class="w-full">
@@ -117,14 +184,25 @@
 							<div>{lineNum + 1}</div>
 						{/each}
 					</div>
-					<div class="ml-8">
-            <textarea
-							class="w-full text-sm bg-transparent outline-none resize-none"
-							rows={numLines}
+					<div class="relative ml-8">
+						<!-- Syntax Highlighted Overlay -->
+						<div
+							bind:this={overlayElement}
+							class="absolute top-0 left-0 w-full h-full pointer-events-none whitespace-pre"
+						>{@html highlightedContent}</div
+						>
+						<!-- Actual Editor -->
+						<textarea
+							bind:this={editorElement}
 							bind:value={content}
+							on:scroll={handleScroll}
+							on:input={parseContent}
+							class="w-full text-sm bg-transparent outline-none resize-none relative min-h-[200px]"
+							class:text-transparent={isValidJson}
+							class:text-white={!isValidJson}
+							rows={numLines}
 							placeholder="Enter JSON content here..."
-							onchange={parseContent}
-						></textarea>
+							style="caret-color: white;"></textarea>
 					</div>
 				</div>
 
