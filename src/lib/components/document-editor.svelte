@@ -2,6 +2,7 @@
 	import * as Accordion from '$lib/components/ui/accordion';
 	import * as Card from '$lib/components/ui/card';
 	import * as Alert from '$lib/components/ui/alert/index.js';
+	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
 	import { derived } from 'svelte/store';
 	import { Braces, CircleMinus, TableProperties, CircleAlert } from 'lucide-svelte';
@@ -239,10 +240,31 @@
 
 	// Handle click on the field inputs
 	function handleInputClick(e: MouseEvent) {
-		if (e.target instanceof HTMLInputElement) {
-			e.target.select();
+		if (!(e.target instanceof HTMLInputElement)) return;
+
+		const input = e.target;
+		const rect = input.getBoundingClientRect();
+		const clickX = e.clientX - rect.left; // relative x position within input
+
+		// Get the text width using a temporary canvas
+		const canvas = document.createElement('canvas');
+		const context = canvas.getContext('2d');
+		if (!context) return;
+
+		// Match the input's font styling
+		const computedStyle = window.getComputedStyle(input);
+		context.font = `${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+		const textWidth = context.measureText(input.value).width;
+
+		// Add some padding to the text width to account for cursor space
+		const textAreaWithPadding = textWidth + 8; // adjust padding as needed
+
+		// If clicked beyond the text area, select all
+		if (clickX > textAreaWithPadding) {
+			input.select();
 		}
 	}
+
 
 	// Handler for tab and enter keys
 	function handleKeyDown(e: KeyboardEvent) {
@@ -379,7 +401,7 @@
 </script>
 
 <Card.Root class="w-full">
-	<Card.Header class="flex flex-row justify-between items-center">
+	<Card.Header class="flex flex-row justify-between items-center mb-2">
 		<Card.Title>{titleText}</Card.Title>
 		<div class="flex items-center gap-3">
 			<span class="text-sm">VIEW</span>
@@ -400,8 +422,8 @@
 		{#if !isFieldView}
 			<!-- JSON View -->
 			<div class="space-y-4">
-				<div class="relative bg-gray-800 text-white rounded-lg p-4 font-mono">
-					<div class="absolute left-0 top-0 p-4 text-gray-500 select-none">
+				<div class="relative bg-gray-800 text-white rounded-lg p-3 font-mono">
+					<div class="absolute left-0 top-0 p-3 text-gray-500 select-none">
 						{#each Array(numLines) as _, lineNum}
 							<div>{lineNum + 1}</div>
 						{/each}
@@ -457,29 +479,37 @@
 			{#if !jsonError}
 				<!-- Fields View -->
 				<div class="space-y-4">
-					<div class="grid gap-4">
+					<div class={entries.length ? `grid gap-4 pb-4 border-b border-gray-200 md:px-4` : ""}>
 						{#each entries as [key, value]}
 							<div class="flex items-center gap-2">
-								<Input
-									type="text"
-									value={key}
-									class="flex-1"
-									onclick={handleInputClick}
-									onchange={(e: Event) => {
+								<div class="flex-1">
+									<Label class="text-gray-600">Key</Label>
+									<Input
+										type="text"
+										value={key}
+										class=""
+										onclick={handleInputClick}
+										onchange={(e: Event) => {
 								const target = e.target as HTMLInputElement;
 								updateKey(key, target.value);
 							}}
-								/>
-								<Input
-									type="text"
-									value={value}
-									class="flex-1"
-									onclick={handleInputClick}
-									onchange={(e: Event) => {
+									/>
+								</div>
+								<div class="flex-1">
+									<Label class="text-gray-600">Value</Label>
+
+									<Input
+										type="text"
+										value={value}
+										class=""
+										onclick={handleInputClick}
+										onchange={(e: Event) => {
 								const target = e.target as HTMLInputElement;
 								updateValue(key, target.value);
 							}}
-								/>
+									/>
+								</div>
+
 								<Button
 									variant="ghost"
 									size="icon"

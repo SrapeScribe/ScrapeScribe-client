@@ -1,5 +1,6 @@
 import { fontFamily } from 'tailwindcss/defaultTheme';
 import type { Config } from 'tailwindcss';
+import defaultTheme from 'tailwindcss/defaultTheme';
 import animate from 'tailwindcss-animate';
 
 const config: Config = {
@@ -80,6 +81,10 @@ const config: Config = {
 			'4xl': '2.25rem',
 			'5xl': '3rem',
 			'6xl': '4rem'
+		},
+		screens: {
+			'xs':'480px',
+			...defaultTheme.screens,
 		},
 	},
 	plugins: [animate]
