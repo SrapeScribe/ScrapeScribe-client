@@ -13,8 +13,9 @@
 	}: { content?: string, titleText?: string, closeEditor?: () => void; } = $props();
 
 	// Editor refs
-	let editorElement: HTMLTextAreaElement;
-	let overlayElement: HTMLDivElement;
+	let editorElement = $state<HTMLTextAreaElement | null>(null);
+	let overlayElement = $state<HTMLDivElement | null>(null);
+	let indentationElement = $state<HTMLDivElement | null>(null);
 
 	let isFieldView = $state(true);
 	let entries = $state<[string, any][]>([]);
@@ -26,12 +27,97 @@
 		closeEditor();
 	}
 
-	// Handle scroll sync between editor and overlay
+	// Helper to generate indentation bullets for a line
+	function generateIndentationBullets(line: string): string {
+		const indentMatch = line.match(/^\s*/);
+		const indentLength = indentMatch ? indentMatch[0].length : 0;
+
+		return Array(indentLength)
+			.fill('•')
+			.map((bullet, index) =>
+				`<span class="text-gray-600 opacity-30">${bullet}</span>`
+			)
+			.join('');
+	}
+
+
+	// Generate indentation guides for all lines
+	function generateIndentationGuides(text: string): string {
+		return text
+			.split('\n')
+			.map(line => generateIndentationBullets(line))
+			.join('\n');
+	}
+
+	function findFieldBoundaries(text: string, position: number): { start: number; end: number } | null {
+		const lines = text.split('\n');
+		let currentPos = 0;
+		let currentLine = 0;
+
+		// Find the current line
+		while (currentLine < lines.length && currentPos + lines[currentLine].length + 1 <= position) {
+			currentPos += lines[currentLine].length + 1;
+			currentLine++;
+		}
+
+		if (currentLine >= lines.length) return null;
+
+		const line = lines[currentLine];
+		const posInLine = position - currentPos;
+
+		// Check if we're clicking on or around special characters
+		const specialCharPos = line.slice(Math.max(0, posInLine - 1), posInLine + 1);
+		if (specialCharPos.match(/[{}\[\],:]/)) {
+			return null;
+		}
+
+		// Pattern for JSON key-value pairs
+		const keyValuePattern = /"([^"]*)":\s*("[^"]*"|[\d.]+|true|false|null|\{|\[)/g;
+		let match;
+
+		while ((match = keyValuePattern.exec(line)) !== null) {
+			const fullMatch = match[0];
+			const startInLine = match.index;
+			const endInLine = startInLine + fullMatch.length;
+
+			// Check if cursor is within the key (excluding quotes)
+			if (match[1] && posInLine > match.index + 1 && posInLine < match.index + match[1].length + 1) {
+				return {
+					start: currentPos + startInLine + 1,
+					end: currentPos + startInLine + match[1].length + 1
+				};
+			}
+
+			// Check if cursor is within the value (excluding quotes and special chars)
+			const valueStart = line.indexOf(match[2], startInLine + match[1].length + 2);
+			if (valueStart >= 0) {
+				const valueContent = match[2].replace(/^"|"$/g, '');
+				const contentStart = valueStart + (match[2].startsWith('"') ? 1 : 0);
+
+				if (posInLine > contentStart && posInLine < contentStart + valueContent.length) {
+					return {
+						start: currentPos + contentStart,
+						end: currentPos + contentStart + valueContent.length
+					};
+				}
+			}
+		}
+
+		return null;
+	}
+
+	// Handle scroll sync between editor, overlay, and indentation guides
 	function handleScroll(e: Event) {
-		if (overlayElement && e.target === editorElement) {
+		if (overlayElement && indentationElement && editorElement && e.target === editorElement) {
 			overlayElement.scrollTop = editorElement.scrollTop;
 			overlayElement.scrollLeft = editorElement.scrollLeft;
+			indentationElement.scrollTop = editorElement.scrollTop;
 		}
+	}
+
+	function cleanJsonString(str: string): string {
+		// Remove trailing commas
+		return str.replace(/,(\s*[}\]])/g, '$1');
 	}
 
 	// Syntax highlighting function
@@ -42,7 +128,7 @@
 
 		try {
 			// Try to parse with cleaned JSON
-			const cleanContent = code.replace(/,(\s*[}\]])/g, '$1');
+			const cleanContent = cleanJsonString(code);
 			JSON.parse(cleanContent);
 			isValidJson = true;
 
@@ -78,11 +164,6 @@
 				)
 				.replace(/([{}\[\],])/g, (match) => `<span class="text-gray-400">${match}</span>`); // Always highlight structural characters
 		}
-	}
-
-	function cleanJsonString(str: string): string {
-		// Remove trailing commas
-		return str.replace(/,(\s*[}\]])/g, '$1');
 	}
 
 	function parseContent() {
@@ -143,6 +224,147 @@
 		}
 	}
 
+	// Handle click on the editor
+	function handleClick(e: MouseEvent) {
+		if (!editorElement) return;
+
+		const cursorPosition = editorElement.selectionStart;
+		const boundaries = findFieldBoundaries(content, cursorPosition);
+
+		if (boundaries) {
+			editorElement.setSelectionRange(boundaries.start, boundaries.end);
+			e.preventDefault();
+		}
+	}
+
+	// Handle click on the field inputs
+	function handleInputClick(e: MouseEvent) {
+		if (e.target instanceof HTMLInputElement) {
+			e.target.select();
+		}
+	}
+
+	// Handler for tab and enter keys
+	function handleKeyDown(e: KeyboardEvent) {
+		if (!(e.target instanceof HTMLTextAreaElement)) return;
+
+		const target = e.target;
+		const cursorPosition = target.selectionStart;
+		const selectionEnd = target.selectionEnd;
+
+		// Handle Tab key
+		if (e.key === 'Tab') {
+			e.preventDefault();
+
+			// If there's a selection, handle multi-line indentation
+			if (cursorPosition !== selectionEnd) {
+				const selectedText = content.slice(cursorPosition, selectionEnd);
+				if (selectedText.includes('\n')) {
+					const lines = content.split('\n');
+					let startLine = content.slice(0, cursorPosition).split('\n').length - 1;
+					let endLine = content.slice(0, selectionEnd).split('\n').length - 1;
+
+					if (!e.shiftKey) {
+						// Indent selected lines
+						lines.splice(startLine, endLine - startLine + 1,
+							...lines.slice(startLine, endLine + 1).map(line => '  ' + line)
+						);
+					} else {
+						// Unindent selected lines
+						lines.splice(startLine, endLine - startLine + 1,
+							...lines.slice(startLine, endLine + 1).map(line =>
+								line.startsWith('  ') ? line.slice(2) : line
+							)
+						);
+					}
+
+					const newContent = lines.join('\n');
+					const newCursorPosition = cursorPosition + 2;
+					content = newContent;
+
+					requestAnimationFrame(() => {
+						target.selectionStart = cursorPosition;
+						target.selectionEnd = selectionEnd + (newContent.length - content.length);
+					});
+				} else {
+					// Single line selection - just add spaces at cursor
+					const newContent =
+						content.slice(0, cursorPosition) +
+						'  ' +
+						content.slice(selectionEnd);
+
+					content = newContent;
+
+					requestAnimationFrame(() => {
+						target.selectionStart = target.selectionEnd = cursorPosition + 2;
+					});
+				}
+			} else {
+				// No selection - just add spaces at cursor
+				const newContent =
+					content.slice(0, cursorPosition) +
+					'  ' +
+					content.slice(cursorPosition);
+
+				content = newContent;
+
+				requestAnimationFrame(() => {
+					target.selectionStart = target.selectionEnd = cursorPosition + 2;
+				});
+			}
+
+			parseContent();
+			return;
+		}
+
+		// Handle Enter key (existing code)
+		if (e.key === 'Enter') {
+			const beforeCursor = content.slice(0, cursorPosition);
+			const afterCursor = content.slice(cursorPosition);
+			const lines = beforeCursor.split('\n');
+			let lastNonEmptyLine = '';
+
+			// Find the last non-empty line to get its indentation
+			for (let i = lines.length - 1; i >= 0; i--) {
+				if (lines[i].trim()) {
+					lastNonEmptyLine = lines[i];
+					break;
+				}
+			}
+
+			// Get base indentation from the first non-empty line
+			const baseIndent = lastNonEmptyLine.match(/^\s*/)?.at(0) ?? '';
+			// If cursor is between empty brackets
+			if (lastNonEmptyLine.trim() === '{' && afterCursor.trim().startsWith('}')) {
+				e.preventDefault();
+				const newContent =
+					beforeCursor +
+					'\n' + baseIndent + '  ' +
+					'\n' + baseIndent + afterCursor;
+
+				content = newContent;
+
+				// Place cursor after the indentation on the middle line
+				const newCursorPosition = beforeCursor.length + baseIndent.length + 3;
+				requestAnimationFrame(() => {
+					target.selectionStart = target.selectionEnd = newCursorPosition;
+				});
+			} else {
+				// For any other Enter press, just add a newline with same indentation
+				e.preventDefault();
+				const newContent = beforeCursor + '\n' + baseIndent;
+				content = newContent + afterCursor;
+
+				const newCursorPosition = beforeCursor.length + baseIndent.length + 1;
+				requestAnimationFrame(() => {
+					target.selectionStart = target.selectionEnd = newCursorPosition;
+				});
+			}
+		}
+
+		// Update syntax highlighting
+		parseContent();
+	}
 
 	// initial parse
 	$effect(() => {
@@ -184,25 +406,34 @@
 							<div>{lineNum + 1}</div>
 						{/each}
 					</div>
+					<!-- In the template, adjust the padding values -->
 					<div class="relative ml-8">
+						<!-- Indentation Bullets -->
+						<div
+							bind:this={indentationElement}
+							class="absolute top-0 left-0 w-full h-full pointer-events-none whitespace-pre pl-3"
+						>{@html generateIndentationGuides(content)}</div>
 						<!-- Syntax Highlighted Overlay -->
 						<div
 							bind:this={overlayElement}
-							class="absolute top-0 left-0 w-full h-full pointer-events-none whitespace-pre"
-						>{@html highlightedContent}</div
-						>
+							class="absolute top-0 left-0 w-full h-full pointer-events-none whitespace-pre pl-3"
+						>{@html highlightedContent}</div>
 						<!-- Actual Editor -->
 						<textarea
 							bind:this={editorElement}
 							bind:value={content}
 							on:scroll={handleScroll}
 							on:input={parseContent}
-							class="w-full text-sm bg-transparent outline-none resize-none relative min-h-[200px]"
+							on:keydown={handleKeyDown}
+							on:click={handleClick}
+							class="w-full text-sm bg-transparent outline-none resize-none relative min-h-[100px] pl-3"
 							class:text-transparent={isValidJson}
 							class:text-white={!isValidJson}
 							rows={numLines}
 							placeholder="Enter JSON content here..."
-							style="caret-color: white;"></textarea>
+							style="caret-color: white;"
+							spellcheck="false"
+						></textarea>
 					</div>
 				</div>
 
@@ -220,12 +451,11 @@
 					>
 						Add Field
 					</Button>
-
 				{/if}
 			</div>
 		{:else}
 			{#if !jsonError}
-				<!-- Fields View - Only show if no JSON errors -->
+				<!-- Fields View -->
 				<div class="space-y-4">
 					<div class="grid gap-4">
 						{#each entries as [key, value]}
@@ -234,19 +464,21 @@
 									type="text"
 									value={key}
 									class="flex-1"
+									onclick={handleInputClick}
 									onchange={(e: Event) => {
-                  const target = e.target as HTMLInputElement;
-                  updateKey(key, target.value);
-                }}
+								const target = e.target as HTMLInputElement;
+								updateKey(key, target.value);
+							}}
 								/>
 								<Input
 									type="text"
 									value={value}
 									class="flex-1"
+									onclick={handleInputClick}
 									onchange={(e: Event) => {
-                  const target = e.target as HTMLInputElement;
-                  updateValue(key, target.value);
-                }}
+								const target = e.target as HTMLInputElement;
+								updateValue(key, target.value);
+							}}
 								/>
 								<Button
 									variant="ghost"
@@ -290,7 +522,4 @@
 			</Button>
 		</div>
 	</Card.Content>
-
 </Card.Root>
-
-
