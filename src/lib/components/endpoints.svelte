@@ -33,7 +33,7 @@
       }}
 		>
 			<Accordion.Item class="border-0" value="item-{i}">
-				<Accordion.Trigger class="group w-full bg-purple-100 hover:bg-purple-200 p-4 rounded-lg  hover:no-underline">
+				<Accordion.Trigger class="group w-full bg-slate-100 hover:bg-slate-200 p-4 rounded-lg hover:no-underline">
           <span class="flex items-center gap-2">
             <span class={`px-2 py-1 rounded text-sm font-mono ${METHOD_STYLES[endpoint.method]}`}>
               {endpoint.method}

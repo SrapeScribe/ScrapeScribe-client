@@ -2,16 +2,28 @@
 	import * as Accordion from '$lib/components/ui/accordion';
 	import * as Card from '$lib/components/ui/card';
 	import * as Alert from '$lib/components/ui/alert/index.js';
+	import * as Select from '$lib/components/ui/select';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
 	import { derived } from 'svelte/store';
 	import { Braces, CircleMinus, TableProperties, CircleAlert } from 'lucide-svelte';
 	import { Input } from '$lib/components/ui/input';
+	import type { DocumentField, FieldType } from '../../interfaces';
 
 	let {
 		content = '', titleText = 'Document Editor', closeEditor = () => {
 		}
 	}: { content?: string, titleText?: string, closeEditor?: () => void; } = $props();
+
+
+	const fieldTypeOptions = [
+		{ value: 'static', label: 'Static string' },
+		{ value: 'scraped-string', label: 'Scraped string' },
+		{ value: 'scraped-list', label: 'Scraped list' },
+		{ value: 'scraped-object', label: 'Scraped object' }
+	] as const;
+
 
 	// Editor refs
 	let editorElement = $state<HTMLTextAreaElement | null>(null);
@@ -19,7 +31,7 @@
 	let indentationElement = $state<HTMLDivElement | null>(null);
 
 	let isFieldView = $state(true);
-	let entries = $state<[string, any][]>([]);
+	let entries = $state<DocumentField[]>([]);
 	let jsonError = $state<string | null>(null);
 	let highlightedContent = $state('');
 	let isValidJson = $state(true);
@@ -167,6 +179,16 @@
 		}
 	}
 
+	function hasDuplicateKeys(fields: DocumentField[]): { hasDuplicates: boolean; duplicateKeys: string[] } {
+		const keys = fields.map(field => field.key);
+		const duplicates = keys.filter((key, index) => keys.indexOf(key) !== index);
+		const uniqueDuplicates = Array.from(new Set(duplicates));
+		return {
+			hasDuplicates: uniqueDuplicates.length > 0,
+			duplicateKeys: uniqueDuplicates
+		};
+	}
+
 	function parseContent() {
 		try {
 			const cleanContent = content.replace(/,(\s*[}\]])/g, '$1');
@@ -176,47 +198,109 @@
 				throw new Error('Content must be a valid JSON object');
 			}
 
-			entries = Object.entries(parsed);
+			// Convert parsed object to Field array
+			const newEntries = Object.entries(parsed).map(([key, value]) => ({
+				key,
+				value,
+				type: 'static' as FieldType // Default type for existing fields
+			}));
+
+			// Check for duplicate keys
+			const { hasDuplicates, duplicateKeys } = hasDuplicateKeys(newEntries);
+			if (hasDuplicates) {
+				throw new Error(`Duplicate keys found: ${duplicateKeys.join(', ')}`);
+			}
+
+			entries = newEntries;
 			jsonError = null;
-			highlightedContent = highlightJson(content); // Use original content for highlighting
+			highlightedContent = highlightJson(content);
 			return true;
 		} catch (e) {
 			jsonError = e instanceof Error ? e.message : 'Invalid JSON format';
-			entries = [];
 			highlightedContent = highlightJson(content);
 			return false;
 		}
 	}
 
 	function updateValue(key: string, newValue: string) {
-		entries = entries.map(([k, v]) =>
-			k === key ? [k, newValue] : [k, v]
+		entries = entries.map(field =>
+			field.key === key
+				? { ...field, value: newValue }
+				: field
 		);
 		updateContent();
 	}
 
 	function updateKey(oldKey: string, newKey: string) {
-		entries = entries.map(([k, v]) =>
-			k === oldKey ? [newKey, v] : [k, v]
+		// Check if the new key already exists in other fields
+		const keyExists = entries.some(field => field.key === newKey && field.key !== oldKey);
+
+		if (keyExists) {
+			// Update the field with an error but don't change the key
+			entries = entries.map(field =>
+				field.key === oldKey
+					? { ...field, error: `Key "${newKey}" already exists` }
+					: field
+			);
+			return false;
+		}
+
+		// Clear any existing errors and update the key
+		entries = entries.map(field =>
+			field.key === oldKey
+				? { ...field, key: newKey, error: undefined }
+				: field
 		);
+
 		updateContent();
+		return true;
 	}
 
+	function updateFieldType(key: string, type: FieldType) {
+		entries = entries.map(field =>
+			field.key === key
+				? { ...field, type }
+				: field
+		);
+	}
 
 	function deleteField(keyToDelete: string) {
-		entries = entries.filter(([k]) => k !== keyToDelete);
+		entries = entries.filter(field => field.key !== keyToDelete);
 		updateContent();
 	}
 
 	function addField() {
-		const newKey = `field_${entries.length + 1}`;
-		entries = [...entries, [newKey, '']];
+		let index = entries.length + 1;
+		let newKey = `field_${index}`;
+
+		// Keep incrementing the index until we find a unique key
+		while (entries.some(field => field.key === newKey)) {
+			index++;
+			newKey = `field_${index}`;
+		}
+
+		entries = [...entries, {
+			key: newKey,
+			value: '',
+			type: 'static'
+		}];
 		updateContent();
 	}
 
 	function updateContent() {
 		try {
-			content = JSON.stringify(Object.fromEntries(entries), null, 2);
+			// Check for duplicate keys before updating
+			const { hasDuplicates, duplicateKeys } = hasDuplicateKeys(entries);
+			if (hasDuplicates) {
+				jsonError = `Duplicate keys found: ${duplicateKeys.join(', ')}`;
+				return;
+			}
+
+			// Convert Field array back to simple object for JSON
+			const obj = Object.fromEntries(
+				entries.map(field => [field.key, field.value])
+			);
+			content = JSON.stringify(obj, null, 2);
 			jsonError = null;
 			highlightedContent = highlightJson(content);
 		} catch (e) {
@@ -257,7 +341,7 @@
 		const textWidth = context.measureText(input.value).width;
 
 		// Add some padding to the text width to account for cursor space
-		const textAreaWithPadding = textWidth + 8; // adjust padding as needed
+		const textAreaWithPadding = textWidth + 32;
 
 		// If clicked beyond the text area, select all
 		if (clickX > textAreaWithPadding) {
@@ -401,7 +485,7 @@
 </script>
 
 <Card.Root class="w-full">
-	<Card.Header class="flex flex-row justify-between items-center mb-2">
+	<Card.Header class={`flex flex-row justify-between items-center ${entries.length ? "mb-4" : ""}`}>
 		<Card.Title>{titleText}</Card.Title>
 		<div class="flex items-center gap-3">
 			<span class="text-sm">VIEW</span>
@@ -478,43 +562,90 @@
 		{:else}
 			{#if !jsonError}
 				<!-- Fields View -->
+				<!-- Show only if there are no JSON parsing errors-->
 				<div class="space-y-4">
 					<div class={entries.length ? `grid gap-4 pb-4 border-b border-gray-200 md:px-4` : ""}>
-						{#each entries as [key, value]}
+						{#each entries as field}
 							<div class="flex items-center gap-2">
-								<div class="flex-1">
-									<Label class="text-gray-600">Key</Label>
+								<div class="basis-1/2">
+									<Label class="text-gray-600" for={field.key + "_field"}>Key</Label>
 									<Input
 										type="text"
-										value={key}
+										value={field.key}
+										id={field.key + "_field"}
 										class=""
 										onclick={handleInputClick}
 										onchange={(e: Event) => {
-								const target = e.target as HTMLInputElement;
-								updateKey(key, target.value);
-							}}
+          const target = e.target as HTMLInputElement;
+          updateKey(field.key, target.value);
+        }}
 									/>
 								</div>
-								<div class="flex-1">
-									<Label class="text-gray-600">Value</Label>
-
-									<Input
-										type="text"
-										value={value}
-										class=""
-										onclick={handleInputClick}
-										onchange={(e: Event) => {
-								const target = e.target as HTMLInputElement;
-								updateValue(key, target.value);
-							}}
-									/>
+								<!--Static string-->
+								{#if field.type === 'static'}
+									<div class="basis-1/4 flex flex-col">
+										<Label class="text-gray-600 mb-1" for={field.key + "_static_value"}>Value</Label>
+										<Input
+											type="text"
+											value={field.value}
+											id={field.key + "_static_value"}
+											class=""
+											onclick={handleInputClick}
+											onchange={(e: Event) => {
+              const target = e.target as HTMLInputElement;
+              updateValue(field.key, target.value);
+            }}
+										/>
+									</div>
+									<!--Modal window with sraping content selection -->
+								{:else}
+									<div class="basis-1/4 flex flex-col">
+										<Label class="text-gray-600 mb-1" for={field.key + "_value"}>
+											Value
+										</Label>
+										<Dialog.Root>
+											<Dialog.Trigger id={field.key + "_value"}>
+												<Button class="h-[40px] w-full font-bold" variant="outline">Select content
+												</Button>
+											</Dialog.Trigger>
+											<Dialog.Content>
+												<Dialog.Header>
+													<Dialog.Title>Embedded iframe</Dialog.Title>
+													<Dialog.Description>
+														Here you will select content from the iframe
+													</Dialog.Description>
+												</Dialog.Header>
+											</Dialog.Content>
+										</Dialog.Root>
+									</div>
+								{/if}
+								<div class="basis-1/4 flex flex-col">
+									<Label class="text-gray-600 mb-1" for={field.key + "_type"}>
+										Type
+									</Label>
+									<Select.Root
+										type="single"
+										id={field.key + "_type"}
+										value={field.type}
+										required
+										onValueChange={(value: FieldType) => updateFieldType(field.key, value)}
+									>
+										<Select.Trigger class="h-[40px] w-full" id={field.key + "_type"}>
+											{fieldTypeOptions.find(option => option.value === field.type)?.label ?? 'Select Type'}
+										</Select.Trigger>
+										<Select.Content>
+											{#each fieldTypeOptions as option}
+												<Select.Item value={option.value}>{option.label}</Select.Item>
+											{/each}
+										</Select.Content>
+									</Select.Root>
 								</div>
 
 								<Button
 									variant="ghost"
 									size="icon"
-									onclick={() => deleteField(key)}
-									class="text-red-500 hover:text-red-700"
+									onclick={() => deleteField(field.key)}
+									class="text-red-500 hover:text-red-700 mt-5"
 								>
 									<CircleMinus />
 								</Button>
