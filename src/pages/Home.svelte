@@ -1,0 +1,6 @@
+<script>
+    console.log('hi')
+</script>
+
+<h1>Home Page</h1>
+<p>Welcome to the home page!</p>
