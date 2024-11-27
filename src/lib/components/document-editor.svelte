@@ -536,10 +536,10 @@
 						<textarea
 							bind:this={editorElement}
 							bind:value={content}
-							on:scroll={handleScroll}
-							on:input={parseContent}
-							on:keydown={handleKeyDown}
-							on:click={handleClick}
+							onscroll={handleScroll}
+							oninput={parseContent}
+							onkeydown={handleKeyDown}
+							onclick={handleClick}
 							class="w-full text-sm bg-transparent outline-none resize-none relative min-h-[100px] pl-3"
 							class:text-transparent={isValidJson}
 							class:text-white={!isValidJson}
