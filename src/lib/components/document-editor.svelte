@@ -1,4 +1,9 @@
 <script lang="ts">
+	// =============================================================================
+	// Imports
+	// =============================================================================
+
+	// Shadcn/svelte
 	import * as Accordion from '$lib/components/ui/accordion';
 	import * as Card from '$lib/components/ui/card';
 	import * as Alert from '$lib/components/ui/alert/index.js';
@@ -6,16 +11,34 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
-	import { derived } from 'svelte/store';
-	import { Braces, CircleMinus, TableProperties, CircleAlert } from 'lucide-svelte';
 	import { Input } from '$lib/components/ui/input';
+
+	// Lucide icons
+	import { Braces, CircleMinus, TableProperties, CircleAlert } from 'lucide-svelte';
+
+	// Svelte actions
+	import { derived } from 'svelte/store';
+
+	// Interfaces
 	import type { DocumentField, FieldType } from '../../interfaces';
 
-	let {
-		content = '', titleText = 'Document Editor', closeEditor = () => {
-		}
-	}: { content?: string, titleText?: string, closeEditor?: () => void; } = $props();
+	// Utils
+	import { cleanJsonString } from '$lib/utils';
 
+	// =============================================================================
+	// Props & Constants
+	// =============================================================================
+
+	let {
+		content = '',
+		titleText = 'Document Editor',
+		closeEditor = () => {
+		}
+	}: {
+		content?: string,
+		titleText?: string,
+		closeEditor?: () => void;
+	} = $props();
 
 	const fieldTypeOptions = [
 		{ value: 'static', label: 'Static string' },
@@ -24,23 +47,44 @@
 		{ value: 'scraped-object', label: 'Scraped object' }
 	] as const;
 
+	// =============================================================================
+	// State Management
+	// =============================================================================
 
 	// Editor refs
 	let editorElement = $state<HTMLTextAreaElement | null>(null);
 	let overlayElement = $state<HTMLDivElement | null>(null);
 	let indentationElement = $state<HTMLDivElement | null>(null);
 
+	// Editor state
 	let isFieldView = $state(true);
 	let entries = $state<DocumentField[]>([]);
 	let jsonError = $state<string | null>(null);
 	let highlightedContent = $state('');
 	let isValidJson = $state(true);
 
-	function handleClose() {
-		closeEditor();
+	// Derived state
+	const lines = $derived(content.split('\n'));
+	const numLines = $derived(Math.max(lines.length, 1));
+
+	// =============================================================================
+	// Utility Functions
+	// =============================================================================
+
+	function hasDuplicateKeys(fields: DocumentField[]): { hasDuplicates: boolean; duplicateKeys: string[] } {
+		const keys = fields.map(field => field.key);
+		const duplicates = keys.filter((key, index) => keys.indexOf(key) !== index);
+		const uniqueDuplicates = Array.from(new Set(duplicates));
+		return {
+			hasDuplicates: uniqueDuplicates.length > 0,
+			duplicateKeys: uniqueDuplicates
+		};
 	}
 
-	// Helper to generate indentation bullets for a line
+	// =============================================================================
+	// Indentation Functions
+	// =============================================================================
+
 	function generateIndentationBullets(line: string): string {
 		const indentMatch = line.match(/^\s*/);
 		const indentLength = indentMatch ? indentMatch[0].length : 0;
@@ -53,8 +97,6 @@
 			.join('');
 	}
 
-
-	// Generate indentation guides for all lines
 	function generateIndentationGuides(text: string): string {
 		return text
 			.split('\n')
@@ -62,90 +104,20 @@
 			.join('\n');
 	}
 
-	function findFieldBoundaries(text: string, position: number): { start: number; end: number } | null {
-		const lines = text.split('\n');
-		let currentPos = 0;
-		let currentLine = 0;
+	// =============================================================================
+	// JSON Processing Functions
+	// =============================================================================
 
-		// Find the current line
-		while (currentLine < lines.length && currentPos + lines[currentLine].length + 1 <= position) {
-			currentPos += lines[currentLine].length + 1;
-			currentLine++;
-		}
-
-		if (currentLine >= lines.length) return null;
-
-		const line = lines[currentLine];
-		const posInLine = position - currentPos;
-
-		// Check if we're clicking on or around special characters
-		const specialCharPos = line.slice(Math.max(0, posInLine - 1), posInLine + 1);
-		if (specialCharPos.match(/[{}\[\],:]/)) {
-			return null;
-		}
-
-		// Pattern for JSON key-value pairs
-		const keyValuePattern = /"([^"]*)":\s*("[^"]*"|[\d.]+|true|false|null|\{|\[)/g;
-		let match;
-
-		while ((match = keyValuePattern.exec(line)) !== null) {
-			const fullMatch = match[0];
-			const startInLine = match.index;
-			const endInLine = startInLine + fullMatch.length;
-
-			// Check if cursor is within the key (excluding quotes)
-			if (match[1] && posInLine > match.index + 1 && posInLine < match.index + match[1].length + 1) {
-				return {
-					start: currentPos + startInLine + 1,
-					end: currentPos + startInLine + match[1].length + 1
-				};
-			}
-
-			// Check if cursor is within the value (excluding quotes and special chars)
-			const valueStart = line.indexOf(match[2], startInLine + match[1].length + 2);
-			if (valueStart >= 0) {
-				const valueContent = match[2].replace(/^"|"$/g, '');
-				const contentStart = valueStart + (match[2].startsWith('"') ? 1 : 0);
-
-				if (posInLine > contentStart && posInLine < contentStart + valueContent.length) {
-					return {
-						start: currentPos + contentStart,
-						end: currentPos + contentStart + valueContent.length
-					};
-				}
-			}
-		}
-
-		return null;
-	}
-
-	// Handle scroll sync between editor, overlay, and indentation guides
-	function handleScroll(e: Event) {
-		if (overlayElement && indentationElement && editorElement && e.target === editorElement) {
-			overlayElement.scrollTop = editorElement.scrollTop;
-			overlayElement.scrollLeft = editorElement.scrollLeft;
-			indentationElement.scrollTop = editorElement.scrollTop;
-		}
-	}
-
-	function cleanJsonString(str: string): string {
-		// Remove trailing commas
-		return str.replace(/,(\s*[}\]])/g, '$1');
-	}
-
-	// Syntax highlighting function
 	function highlightJson(code: string): string {
 		if (!code.trim()) {
 			return '';
 		}
 
 		try {
-			// Try to parse with cleaned JSON
 			const cleanContent = cleanJsonString(code);
 			JSON.parse(cleanContent);
 			isValidJson = true;
 
-			// Always highlight the original code, not the cleaned version
 			return code
 				.replace(
 					/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
@@ -166,28 +138,21 @@
 					}
 				)
 				.replace(/[{}\[\]]/g, (match) => `<span class="text-gray-400">${match}</span>`)
-				.replace(/,/g, (match) => `<span class="text-gray-400">${match}</span>`); // Highlight all commas
+				.replace(/,/g, (match) => `<span class="text-gray-400">${match}</span>`);
 		} catch (e) {
 			isValidJson = false;
-			// Process invalid JSON to still show some basic highlighting
 			return code
 				.replace(
 					/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?)/g,
 					(match) => `<span class="text-white">${match}</span>`
 				)
-				.replace(/([{}\[\],])/g, (match) => `<span class="text-gray-400">${match}</span>`); // Always highlight structural characters
+				.replace(/([{}\[\],])/g, (match) => `<span class="text-gray-400">${match}</span>`);
 		}
 	}
 
-	function hasDuplicateKeys(fields: DocumentField[]): { hasDuplicates: boolean; duplicateKeys: string[] } {
-		const keys = fields.map(field => field.key);
-		const duplicates = keys.filter((key, index) => keys.indexOf(key) !== index);
-		const uniqueDuplicates = Array.from(new Set(duplicates));
-		return {
-			hasDuplicates: uniqueDuplicates.length > 0,
-			duplicateKeys: uniqueDuplicates
-		};
-	}
+	// =============================================================================
+	// Field Management Functions
+	// =============================================================================
 
 	function parseContent() {
 		try {
@@ -198,14 +163,12 @@
 				throw new Error('Content must be a valid JSON object');
 			}
 
-			// Convert parsed object to Field array
 			const newEntries = Object.entries(parsed).map(([key, value]) => ({
 				key,
 				value,
-				type: 'static' as FieldType // Default type for existing fields
+				type: 'static' as FieldType
 			}));
 
-			// Check for duplicate keys
 			const { hasDuplicates, duplicateKeys } = hasDuplicateKeys(newEntries);
 			if (hasDuplicates) {
 				throw new Error(`Duplicate keys found: ${duplicateKeys.join(', ')}`);
@@ -222,6 +185,30 @@
 		}
 	}
 
+	function updateContent() {
+		try {
+			const { hasDuplicates, duplicateKeys } = hasDuplicateKeys(entries);
+			if (hasDuplicates) {
+				jsonError = `Duplicate keys found: ${duplicateKeys.join(', ')}`;
+				return;
+			}
+
+			const obj = Object.fromEntries(
+				entries.map(field => [field.key, field.value])
+			);
+			content = JSON.stringify(obj, null, 2);
+			jsonError = null;
+			highlightedContent = highlightJson(content);
+		} catch (e) {
+			jsonError = e instanceof Error ? e.message : 'Failed to update JSON';
+			highlightedContent = highlightJson(content);
+		}
+	}
+
+	// =============================================================================
+	// Field Operations
+	// =============================================================================
+
 	function updateValue(key: string, newValue: string) {
 		entries = entries.map(field =>
 			field.key === key
@@ -232,11 +219,9 @@
 	}
 
 	function updateKey(oldKey: string, newKey: string) {
-		// Check if the new key already exists in other fields
 		const keyExists = entries.some(field => field.key === newKey && field.key !== oldKey);
 
 		if (keyExists) {
-			// Update the field with an error but don't change the key
 			entries = entries.map(field =>
 				field.key === oldKey
 					? { ...field, error: `Key "${newKey}" already exists` }
@@ -245,7 +230,6 @@
 			return false;
 		}
 
-		// Clear any existing errors and update the key
 		entries = entries.map(field =>
 			field.key === oldKey
 				? { ...field, key: newKey, error: undefined }
@@ -273,7 +257,6 @@
 		let index = entries.length + 1;
 		let newKey = `field_${index}`;
 
-		// Keep incrementing the index until we find a unique key
 		while (entries.some(field => field.key === newKey)) {
 			index++;
 			newKey = `field_${index}`;
@@ -287,29 +270,74 @@
 		updateContent();
 	}
 
-	function updateContent() {
-		try {
-			// Check for duplicate keys before updating
-			const { hasDuplicates, duplicateKeys } = hasDuplicateKeys(entries);
-			if (hasDuplicates) {
-				jsonError = `Duplicate keys found: ${duplicateKeys.join(', ')}`;
-				return;
-			}
+	// =============================================================================
+	// Event Handlers
+	// =============================================================================
 
-			// Convert Field array back to simple object for JSON
-			const obj = Object.fromEntries(
-				entries.map(field => [field.key, field.value])
-			);
-			content = JSON.stringify(obj, null, 2);
-			jsonError = null;
-			highlightedContent = highlightJson(content);
-		} catch (e) {
-			jsonError = e instanceof Error ? e.message : 'Failed to update JSON';
-			highlightedContent = highlightJson(content);
+	function handleClose() {
+		closeEditor();
+	}
+
+	function handleScroll(e: Event) {
+		if (overlayElement && indentationElement && editorElement && e.target === editorElement) {
+			overlayElement.scrollTop = editorElement.scrollTop;
+			overlayElement.scrollLeft = editorElement.scrollLeft;
+			indentationElement.scrollTop = editorElement.scrollTop;
 		}
 	}
 
-	// Handle click on the editor
+	function findFieldBoundaries(text: string, position: number): { start: number; end: number } | null {
+		const lines = text.split('\n');
+		let currentPos = 0;
+		let currentLine = 0;
+
+		while (currentLine < lines.length && currentPos + lines[currentLine].length + 1 <= position) {
+			currentPos += lines[currentLine].length + 1;
+			currentLine++;
+		}
+
+		if (currentLine >= lines.length) return null;
+
+		const line = lines[currentLine];
+		const posInLine = position - currentPos;
+
+		const specialCharPos = line.slice(Math.max(0, posInLine - 1), posInLine + 1);
+		if (specialCharPos.match(/[{}\[\],:]/)) {
+			return null;
+		}
+
+		const keyValuePattern = /"([^"]*)":\s*("[^"]*"|[\d.]+|true|false|null|\{|\[)/g;
+		let match;
+
+		while ((match = keyValuePattern.exec(line)) !== null) {
+			const fullMatch = match[0];
+			const startInLine = match.index;
+			const endInLine = startInLine + fullMatch.length;
+
+			if (match[1] && posInLine > match.index + 1 && posInLine < match.index + match[1].length + 1) {
+				return {
+					start: currentPos + startInLine + 1,
+					end: currentPos + startInLine + match[1].length + 1
+				};
+			}
+
+			const valueStart = line.indexOf(match[2], startInLine + match[1].length + 2);
+			if (valueStart >= 0) {
+				const valueContent = match[2].replace(/^"|"$/g, '');
+				const contentStart = valueStart + (match[2].startsWith('"') ? 1 : 0);
+
+				if (posInLine > contentStart && posInLine < contentStart + valueContent.length) {
+					return {
+						start: currentPos + contentStart,
+						end: currentPos + contentStart + valueContent.length
+					};
+				}
+			}
+		}
+
+		return null;
+	}
+
 	function handleClick(e: MouseEvent) {
 		if (!editorElement) return;
 
@@ -322,35 +350,28 @@
 		}
 	}
 
-	// Handle click on the field inputs
 	function handleInputClick(e: MouseEvent) {
 		if (!(e.target instanceof HTMLInputElement)) return;
 
 		const input = e.target;
 		const rect = input.getBoundingClientRect();
-		const clickX = e.clientX - rect.left; // relative x position within input
+		const clickX = e.clientX - rect.left;
 
-		// Get the text width using a temporary canvas
 		const canvas = document.createElement('canvas');
 		const context = canvas.getContext('2d');
 		if (!context) return;
 
-		// Match the input's font styling
 		const computedStyle = window.getComputedStyle(input);
 		context.font = `${computedStyle.fontSize} ${computedStyle.fontFamily}`;
 		const textWidth = context.measureText(input.value).width;
 
-		// Add some padding to the text width to account for cursor space
 		const textAreaWithPadding = textWidth + 32;
 
-		// If clicked beyond the text area, select all
 		if (clickX > textAreaWithPadding) {
 			input.select();
 		}
 	}
 
-
-	// Handler for tab and enter keys
 	function handleKeyDown(e: KeyboardEvent) {
 		if (!(e.target instanceof HTMLTextAreaElement)) return;
 
@@ -358,11 +379,9 @@
 		const cursorPosition = target.selectionStart;
 		const selectionEnd = target.selectionEnd;
 
-		// Handle Tab key
 		if (e.key === 'Tab') {
 			e.preventDefault();
 
-			// If there's a selection, handle multi-line indentation
 			if (cursorPosition !== selectionEnd) {
 				const selectedText = content.slice(cursorPosition, selectionEnd);
 				if (selectedText.includes('\n')) {
@@ -371,12 +390,10 @@
 					let endLine = content.slice(0, selectionEnd).split('\n').length - 1;
 
 					if (!e.shiftKey) {
-						// Indent selected lines
 						lines.splice(startLine, endLine - startLine + 1,
 							...lines.slice(startLine, endLine + 1).map(line => '  ' + line)
 						);
 					} else {
-						// Unindent selected lines
 						lines.splice(startLine, endLine - startLine + 1,
 							...lines.slice(startLine, endLine + 1).map(line =>
 								line.startsWith('  ') ? line.slice(2) : line
@@ -393,7 +410,6 @@
 						target.selectionEnd = selectionEnd + (newContent.length - content.length);
 					});
 				} else {
-					// Single line selection - just add spaces at cursor
 					const newContent =
 						content.slice(0, cursorPosition) +
 						'  ' +
@@ -406,7 +422,6 @@
 					});
 				}
 			} else {
-				// No selection - just add spaces at cursor
 				const newContent =
 					content.slice(0, cursorPosition) +
 					'  ' +
@@ -423,14 +438,12 @@
 			return;
 		}
 
-		// Handle Enter key (existing code)
 		if (e.key === 'Enter') {
 			const beforeCursor = content.slice(0, cursorPosition);
 			const afterCursor = content.slice(cursorPosition);
 			const lines = beforeCursor.split('\n');
 			let lastNonEmptyLine = '';
 
-			// Find the last non-empty line to get its indentation
 			for (let i = lines.length - 1; i >= 0; i--) {
 				if (lines[i].trim()) {
 					lastNonEmptyLine = lines[i];
@@ -438,9 +451,7 @@
 				}
 			}
 
-			// Get base indentation from the first non-empty line
 			const baseIndent = lastNonEmptyLine.match(/^\s*/)?.at(0) ?? '';
-			// If cursor is between empty brackets
 			if (lastNonEmptyLine.trim() === '{' && afterCursor.trim().startsWith('}')) {
 				e.preventDefault();
 				const newContent =
@@ -450,13 +461,11 @@
 
 				content = newContent;
 
-				// Place cursor after the indentation on the middle line
 				const newCursorPosition = beforeCursor.length + baseIndent.length + 3;
 				requestAnimationFrame(() => {
 					target.selectionStart = target.selectionEnd = newCursorPosition;
 				});
 			} else {
-				// For any other Enter press, just add a newline with same indentation
 				e.preventDefault();
 				const newContent = beforeCursor + '\n' + baseIndent;
 				content = newContent + afterCursor;
@@ -468,20 +477,19 @@
 			}
 		}
 
-		// Update syntax highlighting
 		parseContent();
 	}
 
-	// initial parse
+	// =============================================================================
+	// Effects
+	// =============================================================================
+
 	$effect(() => {
 		if (content) {
 			parseContent();
 		}
 	});
 
-	// Ensure we have at least one line for the editor
-	const lines = $derived(content.split('\n'));
-	const numLines = $derived(Math.max(lines.length, 1));
 </script>
 
 <Card.Root class="w-full">
