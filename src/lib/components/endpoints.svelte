@@ -16,6 +16,7 @@
 	} = $props();
 
 	let contents = endpoints.map(endpoint => JSON.stringify(endpoint.body, null, 2));
+	console.log('contents', contents);
 	let accordionValues = $state<string[]>([]);
 
 	function handleEditorClose(index: number) {
