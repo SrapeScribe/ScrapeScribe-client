@@ -61,6 +61,10 @@ export async function getEndpoints(project_id: string): Promise<Endpoint[]> {
 	return endpoints.filter(endpoint => endpoint.project_id === project_id);
 }
 
+export async function createEmptyEndpoint(project_id: string, name: string): Promise<Endpoint> {
+	return await createEndpoint(project_id, name, '', '')  // should use nulls instead of empty strings (or defaults? idk)
+}
+
 export async function createEndpoint(project_id: string, name: string, instructions: string, refresh_period: string): Promise<Endpoint> {
 	await fakeNetwork()
 	if (endpoints.some(endpoint => endpoint.project_id === project_id && endpoint.name === name)) {
@@ -103,6 +107,12 @@ projects.push({
 	id: skyrimProjectId,
 	user_id: 'u1',
 	name: 'skyrim'
+});
+
+projects.push({
+	id: 'p2',
+	user_id: 'u1',
+	name: 'project2'
 });
 
 endpoints.push({
