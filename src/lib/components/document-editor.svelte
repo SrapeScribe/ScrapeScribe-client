@@ -13,6 +13,8 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 
+	import { toast, Toaster } from 'svelte-sonner';
+
 	// Lucide icons
 	import { Braces, CircleMinus, TableProperties, CircleAlert } from 'lucide-svelte';
 
@@ -685,8 +687,14 @@
 				Cancel
 			</Button>
 			<Button onclick={() => {
-    console.log('Saving:', content);
-  }}>
+				setTimeout(() => {
+					handleClose();
+					setTimeout(() => {
+						toast.success("Successfully saved the document");
+					}, 300);
+				}, 100);
+
+			}}>
 				Save
 			</Button>
 		</div>
