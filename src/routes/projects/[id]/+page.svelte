@@ -3,7 +3,6 @@
 	import type { Endpoint } from '$lib/fakeDb';
 	import Endpoints from '$lib/components/endpoints.svelte';
 	import { HTTPMethod } from '../../../constants';
-	import { onMount } from 'svelte';
 
 	interface PageData {
 		project: {

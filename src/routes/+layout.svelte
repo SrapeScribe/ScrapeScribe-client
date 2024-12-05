@@ -3,6 +3,7 @@
 	import { Provider } from '$lib/components/ui/sidebar/index.js';
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
 	import Navbar from '$lib/components/navbar.svelte';
+	import { Toaster } from 'svelte-sonner';
 
 	let { children } = $props();
 </script>
@@ -14,6 +15,7 @@
 		<Navbar />
 		<main class="">
 			{@render children?.()}
+			<Toaster richColors />
 		</main>
 	</div>
 
