@@ -114,6 +114,11 @@ projects.push({
 	user_id: 'u1',
 	name: 'project2'
 });
+projects.push({
+	id: 'wikiscrape',
+	user_id: 'u1',
+	name: 'WikiScrape',
+});
 
 endpoints.push({
 	id: 'e1',

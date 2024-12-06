@@ -46,7 +46,6 @@
 		{ value: 'static', label: 'Static string' },
 		{ value: 'scraped-string', label: 'Scraped string' },
 		{ value: 'scraped-list', label: 'Scraped list' },
-		{ value: 'scraped-object', label: 'Scraped object' }
 	] as const;
 
 	// =============================================================================
@@ -618,13 +617,17 @@
 												<Button class="h-[40px] w-full font-bold" variant="outline">Select content
 												</Button>
 											</Dialog.Trigger>
-											<Dialog.Content>
+											<Dialog.Content class="max-w-3xl">
 												<Dialog.Header>
-													<Dialog.Title>Embedded iframe</Dialog.Title>
+													<Dialog.Title>Select content to scrape</Dialog.Title>
 													<Dialog.Description>
-														Here you will select content from the iframe
+														Use box selection for scraping content
 													</Dialog.Description>
 												</Dialog.Header>
+												<span class="py-72 text-center">Content</span>
+												<Dialog.Footer>
+													<Button type="submit">Save changes</Button>
+												</Dialog.Footer>
 											</Dialog.Content>
 										</Dialog.Root>
 									</div>

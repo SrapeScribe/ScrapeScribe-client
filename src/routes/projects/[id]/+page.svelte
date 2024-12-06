@@ -14,8 +14,8 @@
 	}
 
 	let { data } = $props();
-	let endpoints = $state(data.endpoints)
-	let endpointsView = $derived(endpoints.map(transformEndpoint))  // now it automatically updates whenevver the `endpoints` variable updates
+	let endpoints = $state(data.endpoints);
+	let endpointsView = $derived(endpoints.map(transformEndpoint));  // now it automatically updates whenevver the `endpoints` variable updates
 	// let endpointsView: EndpointView[] = $state([]);
 	let isLoading = $state(true);
 	let error = $state<string | null>(null);
@@ -50,22 +50,28 @@
 	});
 
 	// create endpoint logic below
-	let newEndpointName = $state('')
+	let newEndpointName = $state('');
 
 	async function handleCreateEndpoint() {
 		try {
-			const newEndpoint = await createEmptyEndpoint(data.project.id, newEndpointName)
-			endpoints = [...endpoints, newEndpoint]
-			newEndpointName = ''
-			console.log('all good')
+			const newEndpoint = await createEmptyEndpoint(data.project.id, newEndpointName);
+			endpoints = [...endpoints, newEndpoint];
+			newEndpointName = '';
+			console.log('all good');
 		} catch (err) {
-			console.log('nuh uh')
+			console.log('nuh uh');
 		}
 	}
 </script>
 
 <div class="max-w-5xl px-4 mx-auto divide-y">
-	<h2 class="text-3xl mb-3">Setup Endpoints</h2>
+	<div class="flex flex-row justify-between items-center">
+		<h2 class="text-3xl mb-3">{data.project.name} - Setup Endpoints</h2>
+		<div class="mb-4">
+			<input type="text" bind:value={newEndpointName} placeholder="name your endpoint..." class="border p-2 mr-2">
+			<button type="button" onclick={handleCreateEndpoint} class="bg-blue-500 text-white p-2">Create</button>
+		</div>
+	</div>
 
 	{#if isLoading}
 		<div class="py-4">Loading endpoints...</div>
@@ -75,9 +81,4 @@
 		<Endpoints endpoints={endpointsView} class="pt-8" />
 	{/if}
 
-	<!-- create endpoint form below -->
-	<div class="pt-8">
-        <input type="text" bind:value={newEndpointName} placeholder="name your endpoint..." class="border p-2 mr-2">
-        <button type="button" onclick={handleCreateEndpoint} class="bg-blue-500 text-white p-2">Create</button>
-    </div>
 </div>
