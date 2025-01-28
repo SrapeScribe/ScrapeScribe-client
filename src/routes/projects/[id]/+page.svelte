@@ -25,14 +25,14 @@
 			const instructions = JSON.parse(endpoint.instructions);
 			return {
 				method: HTTPMethod.GET,
-				url: `/api/${data.project.name}/${endpoint.name}`,
+				url: `/v1/${data.project.name}/${endpoint.name}`,
 				body: instructions
 			};
 		} catch (err) {
 			console.error(`Error parsing instructions for endpoint ${endpoint.name}:`, err);
 			return {
 				method: HTTPMethod.GET,
-				url: `/api/${data.project.name}/${endpoint.name}`,
+				url: `/v1/${data.project.name}/${endpoint.name}`,
 				body: {}
 			};
 		}

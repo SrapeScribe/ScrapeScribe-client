@@ -16,7 +16,7 @@
 	import { toast, Toaster } from 'svelte-sonner';
 
 	// Lucide icons
-	import { Braces, CircleMinus, TableProperties, CircleAlert } from 'lucide-svelte';
+	import { Braces, CircleMinus, TableProperties, CircleAlert, Copy } from 'lucide-svelte';
 
 	// Svelte actions
 	import { derived } from 'svelte/store';
@@ -45,8 +45,7 @@
 	const fieldTypeOptions = [
 		{ value: 'static', label: 'Static string' },
 		{ value: 'scraped-string', label: 'Scraped string' },
-		{ value: 'scraped-list', label: 'Scraped list' },
-		{ value: 'scraped-object', label: 'Scraped object' }
+		{ value: 'scraped-list', label: 'Scraped list' }
 	] as const;
 
 	// =============================================================================
@@ -64,6 +63,9 @@
 	let jsonError = $state<string | null>(null);
 	let highlightedContent = $state('');
 	let isValidJson = $state(true);
+
+	// Modal state
+	let isModalOpen = $state(false);
 
 	// Derived state
 	const lines = $derived(content.split('\n'));
@@ -615,16 +617,30 @@
 										</Label>
 										<Dialog.Root>
 											<Dialog.Trigger id={field.key + "_value"}>
-												<Button class="h-[40px] w-full font-bold" variant="outline">Select content
+												<Button class="h-[40px] w-full font-bold" variant="outline">Select
 												</Button>
 											</Dialog.Trigger>
-											<Dialog.Content>
+											<Dialog.Content class="max-w-3xl">
 												<Dialog.Header>
-													<Dialog.Title>Embedded iframe</Dialog.Title>
+													<Dialog.Title>Select content to scrape</Dialog.Title>
 													<Dialog.Description>
-														Here you will select content from the iframe
+														Use box selection for scraping content
 													</Dialog.Description>
 												</Dialog.Header>
+												<span class="py-72 text-center">Content</span>
+												<Dialog.Footer>
+                                                    <Button onclick={() => {
+															setTimeout(() => {
+																isModalOpen = false
+																setTimeout(() => {
+																	toast.success("Successfully scraped");
+																}, 300);
+															}, 100);
+
+														}}>
+                                                        Save
+                                                    </Button>
+												</Dialog.Footer>
 											</Dialog.Content>
 										</Dialog.Root>
 									</div>
