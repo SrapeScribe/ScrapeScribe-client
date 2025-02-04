@@ -1,62 +1,99 @@
 <script lang="ts">
-	import * as Accordion from '$lib/components/ui/accordion';
-	import DocumentEditor from '$lib/components/document-editor.svelte';
-	import { slide } from 'svelte/transition';
-	import { METHOD_STYLES } from '../../constants';
-	import type { Endpoint } from '../../interfaces';
-	import { cn } from '$lib/utils.js';
+    import {type Endpoint, type Instructions, SchemeType} from '../../interfaces'
+    import {cn} from '$lib/utils.js'
+    import EndpointCard from './endpoint-card.svelte'
+    import {projectStore} from "$lib/stores"
+    import {HTTPMethod} from "../../constants"
+    import ApiClient from "$lib/api/client"
 
-	let {
-		endpoints = [],
-		class: className = '',
-		...restProps
-	}: {
-		endpoints: Endpoint[],
-		class?: string
-	} = $props();
+    let props = $props<{
+        class?: string;
+    }>()
 
-	let contents = endpoints.map(endpoint => JSON.stringify(endpoint.body, null, 2));
-	console.log('contents', contents);
-	let accordionValues = $state<string[]>([]);
+    let {class: className, ...restProps} = props
 
-	function handleEditorClose(index: number) {
-		accordionValues = accordionValues.filter(v => v !== `item-${index}`);
-	}
+
+    let endpoints: Endpoint[] = $state([])
+    let newEndpointName = $state('')
+    let isCreating = $state(false)
+    let createError = $state<string | null>(null)
+
+    projectStore.subscribe((project) => {
+        endpoints = project.endpoints
+    })
+
+    async function handleCreateEndpoint(e: Event) {
+        e.preventDefault()
+
+        if (!newEndpointName.trim() || isCreating) return
+
+        isCreating = true
+        createError = null
+
+        try {
+            const newEndpoint: Endpoint = {
+                id: String(Date.now()),
+                name: newEndpointName.trim(),
+                project_id: '', //substitute with current project id
+                url: '',
+                method: HTTPMethod.GET,
+                instructions: {
+                    url: '',
+                    scheme: {
+                        type: SchemeType.String,
+                        path: '',
+                        mode: 'INNER_HTML'
+                    }
+                } as Instructions,
+                refresh_period: 'daily'
+            }
+
+            await ApiClient.createEndpoint(newEndpoint)
+
+            projectStore.update(project => ({
+                ...project,
+                endpoints: [...project.endpoints, newEndpoint]
+            }))
+
+            newEndpointName = ''
+        } catch (err) {
+            createError = err instanceof Error
+                ? err.message
+                : 'Failed to create endpoint'
+        } finally {
+            isCreating = false
+        }
+    }
 </script>
 
-<div class={cn("mx-auto space-y-4 p-4", className)} {...restProps}>
-	{#each endpoints as endpoint, i}
-		<Accordion.Root
-			type="multiple"
-			value={accordionValues}
-			onValueChange={(value) => {
-        accordionValues = value;
-      }}
-		>
-			<Accordion.Item class="border-0" value="item-{i}">
-				<Accordion.Trigger class="group w-full bg-slate-100 hover:bg-slate-200 p-4 rounded-lg hover:no-underline">
-          <span class="flex items-center gap-2">
-            <span class={`px-2 py-1 rounded text-sm font-mono ${METHOD_STYLES[endpoint.method]}`}>
-              {endpoint.method}
-            </span>
-            <span class="group-hover:underline">{endpoint.url}</span>
-          </span>
-				</Accordion.Trigger>
-				<!--Force Mount to enable transitions-->
-				<Accordion.Content class="pt-4" forceMount={true}>
-					{#snippet child({ props, open, close })}
-					{#if open}
-						<div {...props} transition:slide={{ duration: 200 }}>
-							<DocumentEditor
-								content={contents[i]}
-								closeEditor={() => handleEditorClose(i)}
-							/>
-						</div>
-					{/if}
-					{/snippet}
-				</Accordion.Content>
-			</Accordion.Item>
+<div class={cn('mx-auto space-y-4 p-4', className)} {...restProps}>
+    {#each endpoints as _, i}
+        <EndpointCard bind:endpoint={endpoints[i]}/>
+    {/each}
 
-		</Accordion.Root>
-	{/each}
+    <div class="pt-8">
+        <form
+                onsubmit={handleCreateEndpoint}
+                class="flex gap-2 items-center"
+        >
+            <input
+                    type="text"
+                    bind:value={newEndpointName}
+                    placeholder="Name your endpoint..."
+                    class="border rounded p-2 flex-grow focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isCreating}
+            />
+            <button
+                    type="submit"
+                    class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors"
+                    disabled={isCreating || !newEndpointName.trim()}
+            >
+                {isCreating ? 'Creating...' : 'Create Endpoint'}
+            </button>
+        </form>
+
+        {#if createError}
+            <p class="text-red-500 mt-2">{createError}</p>
+        {/if}
+    </div>
 </div>

@@ -1,15 +1,24 @@
 import { HTTPMethod } from './constants';
 
+export enum SchemeType {
+	String = 'STRING',
+	Object = 'OBJECT',
+	List = 'LIST',
+}
+
 export interface Project {
 	id: string;
-	user: User;
+	user_id: string;
 	name: string;
+	url: string;
+	base_url: string;
+	endpoints: Endpoint[];
 }
 
 export interface Endpoint {
 	id: string;
 	name: string;
-	project: Project;
+	project_id: string;
 	url: string;
 	method: HTTPMethod;
 	instructions: Instructions;
@@ -20,21 +29,10 @@ export interface User {
 	id: string;
 	name: string;
 	email: string;
+	projects: Project[];
 }
 
-export type FieldType = 'static' | 'scraped-string' | 'scraped-list' | 'scraped-object';
-export interface DocumentField {
-	key: string;
-	value: any;
-	type: FieldType;
-	error?: string;
-}
 
-export enum SchemeType {
-	String = 'STRING',
-	Object = 'OBJECT',
-	List = 'LIST',
-}
 
 export function emptyScheme(kind: SchemeType): Scheme {
 	if (kind === SchemeType.String) {

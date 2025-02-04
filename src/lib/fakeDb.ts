@@ -1,5 +1,5 @@
-import { type Endpoint, type Instructions, type Project, SchemeType, type User } from '../interfaces'
-import { HTTPMethod } from "../constants"
+import {type Endpoint, type Instructions, type Project, SchemeType, type User} from '../interfaces'
+import {HTTPMethod} from "../constants"
 
 const projects: Project[] = []
 const users: User[] = []
@@ -32,7 +32,7 @@ export async function getProjects(): Promise<Project[]> {
     return [...projects]
 }
 
-export async function createProject(user_id: string, name: string): Promise<Project> {
+export async function createProject(user_id: string, name: string, url: string): Promise<Project> {
     if (!user_id || !name) {
         throw new Error('User ID and project name are required')
     }
@@ -43,34 +43,40 @@ export async function createProject(user_id: string, name: string): Promise<Proj
         throw new Error('Project name must be unique')
     }
 
-    const user = users.find(u => u.id === user_id)
-    if (!user) {
-        throw new Error('User not found')
-    }
-
-    const project: Project = { id: uuidv4(), user, name }
+    const endpoints: Endpoint[] = []
+    const project: Project = {id: uuidv4(), user_id, name, url, base_url: 'scrapescribe.io', endpoints}
     projects.push(project)
-    return { ...project }
+    return {...project}
 }
 
-export async function getProject(id: string): Promise<Project | null> {
-    if (!id) return null
+export async function getProject(name: string): Promise<Project | null> {
+    if (!name) return null
 
     await fakeNetwork()
-    const project = projects.find(project => project.id === id)
-    return project ? { ...project } : null
+    const project = projects.find(project => project.name === name)
+    return project ? {...project} : null
 }
 
-export async function deleteProject(id: string): Promise<boolean> {
-    if (!id) return false
+export async function getProjectId(name: string): Promise<string | null> {
+    if (!name) return null
 
     await fakeNetwork()
-    const index = projects.findIndex(project => project.id === id)
+    const project = projects.find(project => project.name === name)
+    return project ? project.id : null
+}
 
-    if (index > -1) {
-        // Delete associated endpoints first
-        endpoints.filter(endpoint => endpoint.project.id === id)
-            .forEach(endpoint => deleteEndpoint(endpoint.id))
+export async function deleteProject(name: string): Promise<boolean> {
+    if (!name) return false
+
+    await fakeNetwork()
+    const project = await getProject(name)
+
+    const index = projects.findIndex(project => project.name === name)
+
+    if (project) {
+        // Delete associated endpoints
+        endpoints.filter(endpoint => endpoint.project_id === project.id)
+            .forEach(endpoint => deleteEndpoint(endpoint.name))
 
         projects.splice(index, 1)
         return true
@@ -78,13 +84,14 @@ export async function deleteProject(id: string): Promise<boolean> {
     return false
 }
 
-export async function getEndpoints(project_id: string): Promise<Endpoint[]> {
-    if (!project_id) return []
+export async function getEndpoints(name: string): Promise<Endpoint[]> {
+    if (!name) return []
 
+    const project_id = await getProjectId(name)
     await fakeNetwork()
     return endpoints
-        .filter(endpoint => endpoint.project.id === project_id)
-        .map(endpoint => ({ ...endpoint }))
+        .filter(endpoint => endpoint.project_id === project_id)
+        .map(endpoint => ({...endpoint}))
 }
 
 export async function createEmptyEndpoint(project_id: string, name: string): Promise<Endpoint> {
@@ -117,7 +124,7 @@ export async function createEndpoint(
 
     await fakeNetwork()
 
-    if (endpoints.some(endpoint => endpoint.project.id === project_id && endpoint.name === name)) {
+    if (endpoints.some(endpoint => endpoint.project_id === project_id && endpoint.name === name)) {
         throw new Error('Endpoint name must be unique within the project')
     }
 
@@ -128,7 +135,7 @@ export async function createEndpoint(
 
     const endpoint: Endpoint = {
         id: uuidv4(),
-        project,
+        project_id,
         name,
         url: instructions.url,
         method: HTTPMethod.GET,
@@ -137,7 +144,7 @@ export async function createEndpoint(
     }
 
     endpoints.push(endpoint)
-    return { ...endpoint }
+    return {...endpoint}
 }
 
 export async function getEndpoint(id: string): Promise<Endpoint | null> {
@@ -145,7 +152,7 @@ export async function getEndpoint(id: string): Promise<Endpoint | null> {
 
     await fakeNetwork()
     const endpoint = endpoints.find(endpoint => endpoint.id === id)
-    return endpoint ? { ...endpoint } : null
+    return endpoint ? {...endpoint} : null
 }
 
 export async function deleteEndpoint(id: string): Promise<boolean> {
@@ -175,12 +182,12 @@ export async function updateEndpoint(
     }
 
     // Prevent updating critical fields
-    const safeUpdates = { ...updates }
+    const safeUpdates = {...updates}
     delete safeUpdates.id
-    delete safeUpdates.project
+    delete safeUpdates.project_id
 
     Object.assign(endpoint, safeUpdates)
-    return { ...endpoint }
+    return {...endpoint}
 }
 
 
@@ -190,15 +197,14 @@ const user1Id = 'u1'
 users.push({
     id: user1Id,
     name: 'user1',
-    email: 'john.doe@email.com'
+    email: 'john.doe@email.com',
+    projects: []
 })
 
-const usPresidentsProjectId = 'p5'
-projects.push({
-    id: usPresidentsProjectId,
-    user: users.find(user => user.id === user1Id)!,
-    name: 'usPresidents'
-})
+
+const usPresidentsProject: Project = await createProject(user1Id, 'WhiteHouse', 'whitehouse')
+projects.push(usPresidentsProject)
+
 
 const usPresidentsInstructions: Instructions = {
     url: 'http://whitehouse.gov/presidents',
@@ -267,12 +273,43 @@ const usPresidentsInstructions: Instructions = {
     }
 }
 
+const staffPicksInstructions: Instructions = {
+    url: 'http://whitehouse.gov/staff',
+    scheme: {
+        type: SchemeType.List,
+        path: 'div > ul',
+        element_scheme: {
+            type: SchemeType.Object,
+            fields: [
+                {
+                    key: 'name',
+                    value: {
+                        type: SchemeType.String,
+                        path: 'li > div:nth-of-type(1) > p',
+                        mode: 'INNER_HTML'
+                    }
+                }
+            ]
+        }
+    }
+}
+
 endpoints.push({
     id: 'e5',
-    project: projects.find(projects => projects.id === usPresidentsProjectId)!,
+    project_id: usPresidentsProject.id,
     name: 'All Presidents',
     method: HTTPMethod.GET,
-    url: '/presidents',
+    url: 'presidents',
     instructions: usPresidentsInstructions,
+    refresh_period: 'daily'
+})
+
+endpoints.push({
+    id: 'e6',
+    project_id: usPresidentsProject.id,
+    name: 'Staff Picks',
+    method: HTTPMethod.GET,
+    url: 'staff',
+    instructions: staffPicksInstructions,
     refresh_period: 'daily'
 })
