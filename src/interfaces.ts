@@ -1,38 +1,63 @@
-import { HTTPMethod } from './constants';
+export type User = {
+	cognito_id: string
+	email: string
+	username: string
+	name: string | null
+	role: string
+	created_at: string
+	last_login: string | null
+}
+
+export type Project = {
+	id: string
+	user_id?: string
+	context_path: string
+	status: string
+	created_at: string
+	updated_at: string
+}
+
+export type Endpoint = {
+	id: string
+	project_id: string
+	method: string
+	path: string
+	description: string | null
+	is_active: boolean
+	created_at: string
+	updated_at: string
+}
+
+export type InstructionSet = {
+	id: string
+	endpoint_id: string
+	schema: Record<string, any>
+	created_at: string
+	updated_at: string
+	is_active: boolean
+}
+
+export type ProjectWithEndpointCount = {
+	id: string
+	context_path: string
+	status: string
+	created_at: string
+	updated_at: string
+	endpoint_count: number
+}
+
+export type ProjectRecord = Project | ProjectWithEndpointCount | (Project & Partial<ProjectWithEndpointCount>);
+
+export type UserProfile = {
+	user: User
+	projects: Project[]
+}
 
 export enum SchemeType {
 	String = 'STRING',
 	Object = 'OBJECT',
 	List = 'LIST',
 }
-
-export interface Project {
-	id: string;
-	user_id: string;
-	name: string;
-	url: string;
-	base_url: string;
-	endpoints: Endpoint[];
-}
-
-export interface Endpoint {
-	id: string;
-	name: string;
-	project_id: string;
-	url: string;
-	method: HTTPMethod;
-	instructions: Instructions;
-	refresh_period: string;
-}
-
-export interface User {
-	id: string;
-	name: string;
-	email: string;
-	projects: Project[];
-}
-
-
 
 export function emptyScheme(kind: SchemeType): Scheme {
 	if (kind === SchemeType.String) {
