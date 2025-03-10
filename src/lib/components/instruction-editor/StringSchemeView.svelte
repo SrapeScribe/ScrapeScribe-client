@@ -1,6 +1,6 @@
 <script lang="ts">
 
-    import type {StringScheme} from "../../../interfaces"
+    import type {StringScheme} from "$lib/interfaces"
 
     const { scheme = $bindable() }: { scheme: StringScheme } = $props()
 

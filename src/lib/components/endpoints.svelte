@@ -1,10 +1,9 @@
 <script lang="ts">
-    import {type Endpoint, type Instructions, SchemeType} from '../../interfaces'
+    import {type Endpoint, type Instructions, SchemeType} from '$lib/interfaces'
     import {cn} from '$lib/utils.js'
     import EndpointCard from './endpoint-card.svelte'
-    import {projectStore} from "$lib/stores"
-    import {HTTPMethod} from "../../constants"
-    import ApiClient from "$lib/api/client"
+    // import {projectStore} from "$lib/stores"
+    import {HTTPMethod} from "$lib/constants"
 
     let props = $props<{
         class?: string;
@@ -31,29 +30,29 @@
         createError = null
 
         try {
-            const newEndpoint: Endpoint = {
-                id: String(Date.now()),
-                name: newEndpointName.trim(),
-                project_id: '', //substitute with current project id
-                url: '',
-                method: HTTPMethod.GET,
-                instructions: {
-                    url: '',
-                    scheme: {
-                        type: SchemeType.String,
-                        path: '',
-                        mode: 'INNER_HTML'
-                    }
-                } as Instructions,
-                refresh_period: 'daily'
-            }
-
-            await ApiClient.createEndpoint(newEndpoint)
-
-            projectStore.update(project => ({
-                ...project,
-                endpoints: [...project.endpoints, newEndpoint]
-            }))
+            // const newEndpoint: Endpoint = {
+            //     id: String(Date.now()),
+            //     name: newEndpointName.trim(),
+            //     project_id: '', //substitute with current project id
+            //     url: '',
+            //     method: HTTPMethod.GET,
+            //     instructions: {
+            //         url: '',
+            //         scheme: {
+            //             type: SchemeType.String,
+            //             path: '',
+            //             mode: 'INNER_HTML'
+            //         }
+            //     } as Instructions,
+            //     refresh_period: 'daily'
+            // }
+            //
+            // await ApiClient.createEndpoint(newEndpoint)
+            //
+            // projectStore.update(project => ({
+            //     ...project,
+            //     endpoints: [...project.endpoints, newEndpoint]
+            // }))
 
             newEndpointName = ''
         } catch (err) {

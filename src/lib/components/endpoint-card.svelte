@@ -5,8 +5,7 @@
     import type {Endpoint} from "../../interfaces"
     import Editor from "$lib/components/instruction-editor/Editor.svelte"
     import {setContext} from "svelte"
-    import ApiClient from "$lib/api/client"
-    import {projectStore} from "$lib/stores"
+    // import {projectStore} from "$lib/stores"
 
     let project_id: string
 
@@ -50,7 +49,7 @@
 
         isSaving = true
         try {
-            await ApiClient.updateProjectUrl(project_id, { url: editedUrl.trim() })
+            // await ApiClient.updateProjectUrl(project_id, { url: editedUrl.trim() })
             endpoint.url = editedUrl.trim()
             isEditingUrl = false
             urlError = null
@@ -73,9 +72,9 @@
     {#if isEditingUrl}
         <div class="url-editor flex flex-col gap-2 w-full ">
             <div class="flex items-center gap-2 bg-slate-100 rounded-lg p-3 h-14">
-                <span class={`method-badge px-2 py-1 rounded  text-sm font-mono ${METHOD_STYLES[endpoint.method]}`}>
-                    {endpoint.method}
-                </span>
+<!--                <span class={`method-badge px-2 py-1 rounded  text-sm font-mono ${METHOD_STYLES[endpoint.method]}`}>-->
+<!--                    {endpoint.method}-->
+<!--                </span>-->
 
                 <input
                         type="text"
@@ -114,9 +113,9 @@
                         class="w-full rounded-lg bg-slate-100 hover:bg-slate-200 p-3 h-14 transition-colors hover:no-underline"
                 >
                     <div class="flex items-center gap-2">
-                        <span class={`px-2 py-1 rounded text-sm font-mono ${METHOD_STYLES[endpoint.method]}`}>
-                            {endpoint.method}
-                        </span>
+<!--                        <span class={`px-2 py-1 rounded text-sm font-mono ${METHOD_STYLES[endpoint.method]}`}>-->
+<!--                            {endpoint.method}-->
+<!--                        </span>-->
                         <span class="url-display text-md text-gray-700 truncate">
                             {endpoint.url}/
                         </span>

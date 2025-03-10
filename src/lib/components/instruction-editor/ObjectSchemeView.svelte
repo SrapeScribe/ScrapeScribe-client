@@ -2,7 +2,7 @@
     import Dropdown from "./Dropdown.svelte";
     import KeyNameView from "./KeyNameView.svelte";
     import SchemeView from "./SchemeView.svelte";
-    import {emptyScheme, type ObjectScheme, type SchemeType} from "../../../interfaces"
+    import {emptyScheme, type ObjectScheme, type SchemeType} from "$lib/interfaces"
 
     let {scheme = $bindable()}: { scheme: ObjectScheme } = $props()
 

@@ -32,19 +32,21 @@
 		"prettier": "^3.3.2",
 		"prettier-plugin-svelte": "^3.2.6",
 		"prettier-plugin-tailwindcss": "^0.6.5",
-		"svelte": "^5.0.0",
+		"svelte": "^5.20.4",
 		"svelte-check": "^4.0.9",
 		"svelte-sonner": "^0.3.28",
 		"tailwind-merge": "^2.5.4",
 		"tailwind-variants": "^0.2.1",
 		"tailwindcss": "^3.4.9",
 		"typescript": "^5.6.3",
-		"vite": "^5.0.3",
+		"vite": "^5.4.14",
 		"vite-plugin-top-level-await": "^1.4.4",
 		"vite-plugin-wasm": "^3.3.0",
 		"vitest": "^2.0.4"
 	},
 	"dependencies": {
+		"@aws-amplify/auth": "^6.11.3",
+		"aws-amplify": "^6.13.3",
 		"bits-ui": "^1.0.0-next.60",
 		"tailwindcss-animate": "^1.0.7"
 	}

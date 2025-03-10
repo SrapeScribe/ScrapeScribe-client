@@ -2,7 +2,8 @@ export enum HTTPMethod {
 	GET = 'GET',
 	POST = 'POST',
 	PUT = 'PUT',
-	DELETE = 'DELETE'
+	DELETE = 'DELETE',
+	HEAD = 'HEAD',
 }
 
 export const METHOD_STYLES = {
