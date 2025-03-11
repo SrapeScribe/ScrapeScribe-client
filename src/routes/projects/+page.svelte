@@ -2,6 +2,7 @@
     import {onMount} from 'svelte'
     import {goto} from '$app/navigation'
     import {projectStore} from "$lib/states/project.svelte"
+    import {endpointStore} from "$lib/states/endpoints.svelte"
     import {auth, handleSignIn, handleSignOut} from "$lib/states/auth.svelte"
 
     let newProjectName = $state('')
@@ -11,37 +12,37 @@
     let projectsData = $derived(projectStore.projects)
     let isLoading = $derived(projectStore.isLoading)
 
-    onMount(() => {
-        if (projectsData.length === 0) {
-            projectStore.loadProjects()
-        }
+    onMount(async () => {
+        await projectStore.loadProjects()
     })
 
     async function createProject() {
-        if (!newProjectName.trim()) return;
+        if (!newProjectName.trim()) return
 
-        isCreating = true;
+        isCreating = true
         try {
-            await projectStore.addProject(newProjectName.trim());
-            newProjectName = '';
+            await projectStore.addProject(newProjectName.trim())
+            newProjectName = ''
         } catch (err) {
-            console.error('Failed to create project:', err);
+            console.error('Failed to create project:', err)
         } finally {
-            isCreating = false;
+            isCreating = false
         }
     }
 
     async function deleteProject(projectId: string) {
-        if (!confirm('Are you sure you want to delete this project?')) return;
+        if (!confirm('Are you sure you want to delete this project?')) return
 
         try {
-            await projectStore.removeProject(projectId);
+            await projectStore.removeProject(projectId)
         } catch (err) {
-            console.error('Failed to delete project:', err);
+            console.error('Failed to delete project:', err)
         }
     }
 
     function openProject(slug: string) {
+        // Clear endpoints before navigation
+        endpointStore.endpoints = []
         goto(`/projects/${slug}`)
     }
 </script>
@@ -81,7 +82,6 @@
         </form>
     </div>
 
-    <!-- Projects list -->
     {#if isLoading}
         <div class="text-center py-8">Loading projects...</div>
     {:else if projectsData.length > 0}
@@ -108,7 +108,7 @@
 
                     <div class="mb-4">
                         <p class="text-sm text-gray-600">
-                            <span class="font-medium">Endpoints:</span> { 0}
+                            <span class="font-medium">Endpoints:</span> { project.endpoint_count }
                         </p>
                         <p class="text-sm text-gray-600">
                             <span class="font-medium">Status:</span>

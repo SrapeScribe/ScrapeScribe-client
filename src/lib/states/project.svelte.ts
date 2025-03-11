@@ -1,8 +1,8 @@
 import {authApiClient as apiClient} from "$lib/api/client"
-import type { Project } from "$lib/interfaces"
+import type {Project, ProjectWithEndpointCount} from "$lib/interfaces"
 
 class ProjectStore {
-    projects: Project[] = $state([]);
+    projects: ProjectWithEndpointCount[] = $state([]);
     currentProject: Project | null = $state(null);
     isLoading: boolean = $state(true);
     error: string | null = $state(null);
@@ -16,7 +16,7 @@ class ProjectStore {
         this.isLoading = true
 
         try {
-            let projects = await apiClient.projectApi.getMyProjects()
+            let projects = await apiClient.projectApi.getWithEndpointCounts()
             console.log(projects)
             this.projects = projects
 
@@ -52,7 +52,8 @@ class ProjectStore {
         }
         let project: Project = await apiClient.projectApi.create(projectName, projectSlug)
         console.log("AddProject response: ", project)
-        this.projects = [...this.projects, project]
+        let projectWithEndpointCount: ProjectWithEndpointCount = {...project, endpoint_count: 0}
+        this.projects = [...this.projects, projectWithEndpointCount]
     }
 
     async removeProject(id: string) {

@@ -1,100 +1,126 @@
 <script lang="ts">
     import * as Accordion from '$lib/components/ui/accordion'
     import {slide} from 'svelte/transition'
-    import {METHOD_STYLES} from '../../constants'
-    import type {Endpoint} from "../../interfaces"
-    import Editor from "$lib/components/instruction-editor/Editor.svelte"
+    import {METHOD_STYLES} from '$lib/constants'
+    import type {Endpoint} from "$lib/interfaces"
     import {setContext} from "svelte"
-    // import {projectStore} from "$lib/stores"
+    import {projectStore} from "$lib/states/project.svelte"
+    import {endpointStore} from "$lib/states/endpoints.svelte"
+    import {CircleMinus} from "lucide-svelte"
 
-    let project_id: string
+    let projectData = $derived(projectStore.currentProject)
 
-    projectStore.subscribe((project) => {
-        project_id = project.id
-    })
-    let {endpoint = $bindable(), class: className = ''} = $props()
+    let props = $props<{
+        endpoint: Endpoint;
+        class?: string;
+    }>()
+
+    let {endpoint, class: className = ''}: {endpoint: Endpoint, class: string} = props
     setContext('endpoint', endpoint)
 
     let activeAccordionItems = $state<string[]>([])
-    let isEditingUrl = $state(false)
-    let editedUrl = $state(endpoint.url)
-    let urlError = $state<string | null>(null)
+    let isEditingPath = $state(false)
+    let editedPath = $state(endpoint.path)
+    let pathError = $state<string | null>(null)
     let isSaving = $state(false)
 
-    const validateUrl = (url: string): string | null => {
-        if (!url.trim()) return "URL cannot be empty"
-        if (url === endpoint.url) return "URL must be different from current"
-        if (!/^[a-zA-Z0-9-_/]+$/.test(url)) return "Invalid URL format"
+    const validatePath = (path: string): string | null => {
+        if (!path.trim()) return "Path cannot be empty"
+        if (path === endpoint.path) return "Path must be different from current"
+        if (!/^\/[a-zA-Z0-9-_/]*$/.test(path)) return "Path must start with / and contain only letters, numbers, hyphens, and underscores"
         return null
     }
 
     const startEditing = () => {
-        isEditingUrl = true
-        editedUrl = endpoint.url
-        urlError = null
+        isEditingPath = true
+        editedPath = endpoint.path
+        pathError = null
     }
 
     const cancelEditing = () => {
-        isEditingUrl = false
-        editedUrl = endpoint.url
-        urlError = null
+        isEditingPath = false
+        editedPath = endpoint.path
+        pathError = null
     }
 
     const saveChanges = async () => {
-        const validationError = validateUrl(editedUrl)
+        const validationError = validatePath(editedPath)
         if (validationError) {
-            urlError = validationError
+            pathError = validationError
             return
         }
 
         isSaving = true
         try {
-            // await ApiClient.updateProjectUrl(project_id, { url: editedUrl.trim() })
-            endpoint.url = editedUrl.trim()
-            isEditingUrl = false
-            urlError = null
+            await endpointStore.updateEndpoint({
+                endpoint: {
+                    id: endpoint.id,
+                    path: editedPath.trim()
+                }
+            })
+            isEditingPath = false
+            pathError = null
         } catch (error) {
-            urlError = error instanceof Error
+            pathError = error instanceof Error
                 ? error.message
-                : 'Failed to update URL. Please try again.'
+                : 'Failed to update path. Please try again.'
         } finally {
             isSaving = false
         }
     }
 
-    const editButtonLabel = isEditingUrl
+    async function toggleEndpointStatus() {
+        try {
+            await endpointStore.updateEndpoint({
+                endpoint: {
+                    id: endpoint.id,
+                    is_active: !endpoint.is_active
+                }
+            })
+        } catch (error) {
+            console.error("Failed to toggle status:", error)
+        }
+    }
+
+    async function deleteEndpoint() {
+        if (confirm('Are you sure you want to delete this endpoint?')) {
+            await endpointStore.deleteEndpoint(endpoint.id)
+        }
+    }
+
+    const editButtonLabel = isEditingPath
         ? "Save changes"
-        : "Edit endpoint URL"
+        : "Edit endpoint path"
     const cancelButtonLabel = "Cancel editing"
 </script>
 
 <div class={`endpoint-container flex gap-2 rounded-lg ${className}`}>
-    {#if isEditingUrl}
-        <div class="url-editor flex flex-col gap-2 w-full ">
+    {#if isEditingPath}
+        <div class="path-editor flex flex-col gap-2 w-full ">
             <div class="flex items-center gap-2 bg-slate-100 rounded-lg p-3 h-14">
-<!--                <span class={`method-badge px-2 py-1 rounded  text-sm font-mono ${METHOD_STYLES[endpoint.method]}`}>-->
-<!--                    {endpoint.method}-->
-<!--                </span>-->
+                <span class={`method-badge px-2 py-1 rounded text-sm font-mono ${METHOD_STYLES[endpoint.method]}`}>
+                    {endpoint.method}
+                </span>
 
                 <input
                         type="text"
-                        class="url-input py-1 pl-2 rounded-sm bg-white outline-none"
-                        bind:value={editedUrl}
-                        size={editedUrl.length > 0 ? editedUrl.length : 10}
-                        aria-label="Endpoint URL"
-                        aria-invalid={!!urlError}
+                        class="py-1 pl-2 rounded-sm bg-white outline-none"
+                        bind:value={editedPath}
+                        size={editedPath.length > 0 ? editedPath.length : 10}
+                        aria-label="Endpoint path"
+                        aria-invalid={!!pathError}
                         onkeydown={(e) => e.key === 'Enter' && saveChanges()}
                         disabled={isSaving}
                 />
-                /
+
                 {#if isSaving}
                     <span class="text-gray-500 animate-pulse">Saving...</span>
                 {/if}
             </div>
 
-            {#if urlError}
+            {#if pathError}
                 <p class="error-message text-red-500 text-sm pl-2 transition-opacity">
-                    ⚠️ {urlError}
+                    ⚠️ {pathError}
                 </p>
             {/if}
         </div>
@@ -113,11 +139,14 @@
                         class="w-full rounded-lg bg-slate-100 hover:bg-slate-200 p-3 h-14 transition-colors hover:no-underline"
                 >
                     <div class="flex items-center gap-2">
-<!--                        <span class={`px-2 py-1 rounded text-sm font-mono ${METHOD_STYLES[endpoint.method]}`}>-->
-<!--                            {endpoint.method}-->
-<!--                        </span>-->
-                        <span class="url-display text-md text-gray-700 truncate">
-                            {endpoint.url}/
+                        <span class={`px-2 py-1 rounded text-sm font-mono ${METHOD_STYLES[endpoint.method]}`}>
+                            {endpoint.method}
+                        </span>
+                        <span class="max-w-[200px] text-md text-gray-700 truncate">
+                            {endpoint.path}
+                        </span>
+                        <span class={endpoint.is_active ? 'text-green-600 ml-auto' : 'text-gray-400 ml-auto'}>
+                            {endpoint.is_active ? '✓' : '○'}
                         </span>
                     </div>
                 </Accordion.Trigger>
@@ -126,7 +155,24 @@
                     {#snippet child({props: contentProps, open, close})}
                         {#if open}
                             <div {...contentProps} transition:slide={{ duration: 200 }}>
-                                <Editor/>
+                                <div class="flex justify-between items-center mb-4">
+                                    <h4 class="text-lg font-medium">{endpoint.description || 'No description'}</h4>
+                                    <div class="flex gap-2">
+                                        <button
+                                                onclick={toggleEndpointStatus}
+                                                class="text-sm px-3 py-1 rounded bg-gray-100 hover:bg-gray-200"
+                                        >
+                                            {endpoint.is_active ? 'Deactivate' : 'Activate'}
+                                        </button>
+                                        <button
+                                                onclick={deleteEndpoint}
+                                                class="text-sm px-3 py-1 rounded bg-red-100 hover:bg-red-200 text-red-700"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                                <!--                                <Editor/>-->
                             </div>
                         {/if}
                     {/snippet}
@@ -136,7 +182,8 @@
     {/if}
 
     <div class="action-buttons flex gap-2">
-        {#if isEditingUrl}
+
+        {#if isEditingPath}
             <button
                     onclick={saveChanges}
                     class="save-button p-4 rounded-lg bg-green-100 hover:bg-green-200 w-14 h-14"
@@ -165,14 +212,6 @@
 </div>
 
 <style>
-    .url-input {
-        transition: all 0.2s ease;
-    }
-
-    .url-display {
-        max-width: 400px;
-    }
-
     .error-message {
         opacity: 1;
         transition: opacity 0.3s ease;

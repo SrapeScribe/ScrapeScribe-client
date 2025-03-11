@@ -3,11 +3,6 @@ import {fetchAuthSession} from "aws-amplify/auth"
 import type {Endpoint, InstructionSet, Project, ProjectWithEndpointCount, User} from "$lib/interfaces"
 import {HTTPMethod} from "$lib/constants"
 
-// Basic error type
-export type ApiError = {
-    error: string
-}
-
 class AuthApiClient {
     private fetch: typeof fetch = typeof window !== 'undefined' ? window.fetch.bind(window) : fetch
 
@@ -26,6 +21,23 @@ class AuthApiClient {
             tokens?.idToken?.toString() ?? ""
         )
         return headers
+    }
+
+    /**
+     * Convert any response to an array format
+     * Handles three cases:
+     * - null → []
+     * - single object → [object]
+     * - array → array (unchanged)
+     */
+    private toArray<T>(response: T | T[] | null): T[] {
+        if (response === null) {
+            return []
+        }
+        if (Array.isArray(response)) {
+            return response
+        }
+        return [response]
     }
 
     /**
@@ -115,6 +127,15 @@ class AuthApiClient {
      */
     async get<T>(schema: string, operation: string, parameters: any[]): Promise<T> {
         return this.executeRequest<T>('function', schema, operation, parameters, HTTPMethod.GET)
+    }
+
+    /**
+     * Execute a database function that always returns an array
+     * Handles normalization of different response types
+     */
+    async getArray<T>(schema: string, operation: string, parameters: any[]): Promise<T[]> {
+        const response = await this.executeRequest<T | T[] | null>('function', schema, operation, parameters, HTTPMethod.GET)
+        return this.toArray(response)
     }
 
     /**
@@ -211,21 +232,21 @@ class AuthApiClient {
             ),
 
         getMyProjects: () =>
-            this.get<Project[]>(
+            this.getArray<Project>(
                 'app_private',
                 'get_projects_by_user_id',
                 []
             ),
 
         getAll: () =>
-            this.get<Project[]>(
+            this.getArray<Project>(
                 'app_private',
                 'get_projects_by_user_id',
                 []
             ),
 
         getMyProjectIds: () =>
-            this.get<{ id: string }[]>(
+            this.getArray<{ id: string }>(
                 'app_private',
                 'get_project_ids_by_user_id',
                 []
@@ -239,7 +260,7 @@ class AuthApiClient {
             ),
 
         getWithEndpointCounts: () =>
-            this.get<ProjectWithEndpointCount[]>(
+            this.getArray<ProjectWithEndpointCount>(
                 'app_private',
                 'get_projects_with_endpoint_counts',
                 []
@@ -286,7 +307,7 @@ class AuthApiClient {
             ),
 
         getByProjectId: (projectId: string) =>
-            this.get<Endpoint[]>(
+            this.getArray<Endpoint>(
                 'app_private',
                 'get_project_endpoints',
                 [projectId]
@@ -300,20 +321,32 @@ class AuthApiClient {
             ),
 
         getActive: (projectId: string) =>
-            this.get<Endpoint[]>(
+            this.getArray<Endpoint>(
                 'app_private',
                 'get_active_endpoints',
                 [projectId]
             ),
 
-        create: (projectId: string, method: string, path: string, description: string | null = null, isActive: boolean = true) =>
+        create: (
+            projectId: string,
+            method: string,
+            path: string,
+            description: string | null = null,
+            isActive: boolean = true
+        ) =>
             this.post<Endpoint>(
                 'app_private',
                 'create_endpoint',
                 [projectId, method, path, description, isActive]
             ),
 
-        update: (endpointId: string, method: string | null = null, path: string | null = null, description: string | null = null, isActive: boolean | null = null) =>
+        update: (
+            endpointId: string,
+            method: string | null = null,
+            path: string | null = null,
+            description: string | null = null,
+            isActive: boolean | null = null
+        ) =>
             this.put<Endpoint>(
                 'app_private',
                 'update_endpoint',
@@ -354,7 +387,7 @@ class AuthApiClient {
             ),
 
         getByEndpointId: (endpointId: string) =>
-            this.get<InstructionSet[]>(
+            this.getArray<InstructionSet>(
                 'app_private',
                 'get_instruction_sets_by_endpoint',
                 [endpointId]

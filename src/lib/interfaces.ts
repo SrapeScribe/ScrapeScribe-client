@@ -38,16 +38,9 @@ export type InstructionSet = {
 	is_active: boolean
 }
 
-export type ProjectWithEndpointCount = {
-	id: string
-	context_path: string
-	status: string
-	created_at: string
-	updated_at: string
+export type ProjectWithEndpointCount = Project & {
 	endpoint_count: number
 }
-
-export type ProjectRecord = Project | ProjectWithEndpointCount | (Project & Partial<ProjectWithEndpointCount>);
 
 export type UserProfile = {
 	user: User

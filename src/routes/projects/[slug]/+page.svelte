@@ -1,6 +1,8 @@
 <script lang="ts">
-    import {onMount} from 'svelte'
+    import {onDestroy, onMount} from 'svelte'
     import {projectStore} from "$lib/states/project.svelte"
+    import {endpointStore} from "$lib/states/endpoints.svelte"
+    import Endpoints from "$lib/components/endpoints.svelte"
     import type {PageProps} from "./$types"
 
     const {data}: PageProps = $props()
@@ -19,22 +21,37 @@
         }
     })
 
-    onMount(() => {
-        if (!projectData || projectData.slug !== data.params.slug) {
-            projectStore.loadProject(data.params.slug)
+    // Wait until project is fully loaded before setting the active project
+    $effect(() => {
+        if (projectData?.id && !projectStore.isLoading) {
+            console.log("Project loaded, setting active project:", projectData.id)
+            endpointStore.setActiveProject(projectData.id)
         }
     })
 
-    async function handleUpdateName(e: Event) {
-        if (!projectData) return;
+    onMount(async () => {
+        console.log("Component mounted, loading project:", data.params.slug)
+        // Always reload the project when the page mounts
+        await projectStore.loadProject(data.params.slug)
+    })
 
-        const projectId = projectData.id;
-        const name = newName.trim();
+    onDestroy(() => {
+        console.log("Component destroyed, clearing active project")
+        endpointStore.reset()
+    })
+
+    async function handleUpdateName(e: Event) {
+        e.preventDefault()
+
+        if (!projectData) return
+
+        const projectId = projectData.id
+        const name = newName.trim()
 
         if (!name || name === projectData.name) {
-            isEditingName = false;
-            updateError = "Project name cannot be empty or unchanged";
-            return;
+            isEditingName = false
+            updateError = "Project name cannot be empty or unchanged"
+            return
         }
 
         try {
@@ -43,39 +60,22 @@
                     id: projectId,
                     name: name
                 }
-            });
-            isEditingName = false;
-            updateError = null;
+            })
+            isEditingName = false
+            updateError = null
         } catch (err) {
             updateError = err instanceof Error
                 ? err.message
-                : 'Failed to update project name';
+                : 'Failed to update project name'
         }
     }
 
     function cancelEdit() {
-            if (projectData) {
-                newName = projectData.name;
-            }
-            isEditingName = false;
-            updateError = null;
-    }
-
-    async function createEndpoint() {
-        //     if (!$currentProjectStore.data) return;
-        //
-        //     try {
-        //         await endpointActions.createEndpoint(
-        //             $currentProjectStore.data.id,
-        //             'GET',
-        //             '/api/new-endpoint',
-        //             'New endpoint'
-        //         );
-        //     } catch (err) {
-        //         updateError = err instanceof Error
-        //             ? err.message
-        //             : 'Failed to create endpoint';
-        //     }
+        if (projectData) {
+            newName = projectData.name
+        }
+        isEditingName = false
+        updateError = null
     }
 </script>
 
@@ -86,9 +86,7 @@
 </svelte:head>
 
 <div class="max-w-5xl px-4 mx-auto divide-y">
-    <!-- Project Header -->
     <div class="mb-6">
-        <!-- Loading/Error State -->
         {#if isLoading}
             <div class="py-4">Loading project details...</div>
         {:else if projectStore.error}
@@ -144,7 +142,6 @@
         </span>
             </div>
 
-            <!-- Project ID -->
             <div class="mt-1 text-xs text-gray-500">
                 ID: {projectData.id}
             </div>
@@ -154,72 +151,7 @@
         {#if updateError}
             <p class="text-red-500 mt-2">{updateError}</p>
         {/if}
-        <!-- Context Path Editor -->
-
     </div>
-    <!--{:else}-->
 
-    <!--    &lt;!&ndash; Endpoints Section &ndash;&gt;-->
-    <!--    <div class="pt-6">-->
-    <!--        <div class="flex justify-between items-center mb-4">-->
-    <!--            <h3 class="text-xl font-semibold">Endpoints</h3>-->
-    <!--            <button-->
-    <!--                    onclick={createEndpoint}-->
-    <!--                    disabled={$endpointsStore.loading || !$currentProjectStore.data}-->
-    <!--                    class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 disabled:bg-blue-300"-->
-    <!--            >-->
-    <!--                + Add Endpoint-->
-    <!--            </button>-->
-    <!--        </div>-->
-
-    <!--        &lt;!&ndash; Endpoints List &ndash;&gt;-->
-    <!--        {#if $endpointsStore.loading}-->
-    <!--            <div class="py-4">Loading endpoints...</div>-->
-    <!--        {:else if $endpointsStore.error}-->
-    <!--            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 my-4" role="alert">-->
-    <!--                <p>{$endpointsStore.error}</p>-->
-    <!--            </div>-->
-    <!--        {:else if $endpointsStore.data.length === 0}-->
-    <!--            <div class="bg-gray-100 p-6 text-center rounded-lg">-->
-    <!--                <p class="text-gray-600">This project doesn't have any endpoints yet.</p>-->
-    <!--                <p class="text-sm text-gray-500 mt-2">Click the "Add Endpoint" button to create one.</p>-->
-    <!--            </div>-->
-    <!--        {:else}-->
-    <!--            <div class="bg-white rounded-lg shadow-sm">-->
-    <!--                {#each $endpointsStore.data as endpoint (endpoint.id)}-->
-    <!--                    <div class="p-4 border-b last:border-b-0">-->
-    <!--                        <div class="flex justify-between items-start">-->
-    <!--                            <div>-->
-    <!--                                <div class="flex items-center gap-2">-->
-    <!--                  <span class="font-mono text-sm px-2 py-1 bg-gray-100 text-gray-800 rounded">-->
-    <!--                    {endpoint.method}-->
-    <!--                  </span>-->
-    <!--                                    <span class="font-mono">{endpoint.path}</span>-->
-    <!--                                </div>-->
-    <!--                                {#if endpoint.description}-->
-    <!--                                    <p class="text-sm text-gray-600 mt-1">{endpoint.description}</p>-->
-    <!--                                {/if}-->
-    <!--                            </div>-->
-    <!--                            <div class="flex gap-2">-->
-    <!--                                <button-->
-    <!--                                        onclick={() => endpointActions.toggleEndpointStatus(endpoint.id, !endpoint.is_active)}-->
-    <!--                                        class={endpoint.is_active ? 'text-green-600' : 'text-gray-400'}-->
-    <!--                                        title={endpoint.is_active ? 'Active' : 'Inactive'}-->
-    <!--                                >-->
-    <!--                                    {endpoint.is_active ? '✓' : '○'}-->
-    <!--                                </button>-->
-    <!--                                <button-->
-    <!--                                        onclick={() => endpointActions.deleteEndpoint(endpoint.id)}-->
-    <!--                                        class="text-red-500 hover:text-red-700"-->
-    <!--                                        title="Delete endpoint"-->
-    <!--                                >-->
-    <!--                                    ×-->
-    <!--                                </button>-->
-    <!--                            </div>-->
-    <!--                        </div>-->
-    <!--                    </div>-->
-    <!--                {/each}-->
-    <!--            </div>-->
-    <!--        {/if}-->
-    <!--    </div>-->
+    <Endpoints/>
 </div>
