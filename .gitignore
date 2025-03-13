@@ -4,3 +4,7 @@ target
 .vscode
 .idea
 .env
+.svelte-kit/**
+
+#Testing purpose file
+src/routes/tester/**

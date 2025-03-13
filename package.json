@@ -1,24 +1,53 @@
 {
-  "name": "client",
-  "private": true,
-  "license": "Proprietary",
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "wasm:build": "cd src/wasm && wasm-pack build --target web --out-dir ../../pkg",
-    "dev": "npm run wasm:build && vite",
-    "build": "npm run wasm:build && vite build",
-    "preview": "vite preview"
-  },
-  "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^3.0.1",
-    "@tsconfig/svelte": "^5.0.2",
-    "svelte": "^4.2.8",
-    "svelte-check": "^3.6.2",
-    "tslib": "^2.6.2",
-    "typescript": "^5.2.2",
-    "vite": "^5.0.8",
-    "vite-plugin-top-level-await": "^1.4.1",
-    "vite-plugin-wasm": "^3.3.0"
-  }
+	"name": "scrapescribe-frontend",
+	"version": "0.0.1",
+	"license": "Proprietary",
+	"type": "module",
+	"scripts": {
+		"wasm:build": "cd src/wasm/scraping-instructions && wasm-pack build",
+		"dev": "npm run wasm:build && vite dev",
+		"build": "npm run wasm:build && vite build",
+		"preview": "vite preview",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"format": "prettier --write .",
+		"lint": "prettier --check .",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-auto": "^3.3.1",
+		"@sveltejs/adapter-static": "^3.0.6",
+		"@sveltejs/kit": "^2.8.1",
+		"@sveltejs/vite-plugin-svelte": "^4.0.0",
+		"@tailwindcss/aspect-ratio": "^0.4.2",
+		"@tailwindcss/container-queries": "^0.1.1",
+		"@tailwindcss/forms": "^0.5.9",
+		"@tailwindcss/typography": "^0.5.15",
+		"autoprefixer": "^10.4.20",
+		"clsx": "^2.1.1",
+		"lucide-svelte": "^0.460.1",
+		"mode-watcher": "^0.5.0",
+		"prettier": "^3.3.2",
+		"prettier-plugin-svelte": "^3.2.6",
+		"prettier-plugin-tailwindcss": "^0.6.5",
+		"svelte": "^5.20.4",
+		"svelte-check": "^4.0.9",
+		"svelte-sonner": "^0.3.28",
+		"tailwind-merge": "^2.5.4",
+		"tailwind-variants": "^0.2.1",
+		"tailwindcss": "^3.4.9",
+		"typescript": "^5.6.3",
+		"vite": "^5.4.14",
+		"vite-plugin-top-level-await": "^1.4.4",
+		"vite-plugin-wasm": "^3.3.0",
+		"vitest": "^2.0.4"
+	},
+	"dependencies": {
+		"@aws-amplify/auth": "^6.11.3",
+		"aws-amplify": "^6.13.3",
+		"bits-ui": "^1.0.0-next.60",
+		"tailwindcss-animate": "^1.0.7"
+	}
 }
