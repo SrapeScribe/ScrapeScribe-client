@@ -1,7 +1,7 @@
 <script lang="ts">
     import {onDestroy, onMount} from 'svelte'
     import {projectStore} from "$lib/states/project.svelte"
-    import {endpointStore} from "$lib/states/endpoints.svelte"
+    import {endpointStore} from "$lib/states/endpoint.svelte.js"
     import Endpoints from "$lib/components/endpoints.svelte"
     import type {PageProps} from "./$types"
 

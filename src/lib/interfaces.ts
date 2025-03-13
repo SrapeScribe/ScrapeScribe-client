@@ -8,6 +8,11 @@ export type User = {
 	last_login: string | null
 }
 
+export type UserProfile = {
+	user: User
+	projects: Project[]
+}
+
 export type Project = {
 	id: string
 	user_id?: string
@@ -16,6 +21,10 @@ export type Project = {
 	status: string
 	created_at: string
 	updated_at: string
+}
+
+export type ProjectWithEndpointCount = Project & {
+	endpoint_count: number
 }
 
 export type Endpoint = {
@@ -38,13 +47,34 @@ export type InstructionSet = {
 	is_active: boolean
 }
 
-export type ProjectWithEndpointCount = Project & {
-	endpoint_count: number
+export interface Instructions {
+	url: string,
+	scheme: Scheme
 }
 
-export type UserProfile = {
-	user: User
-	projects: Project[]
+export interface BaseScheme {
+	type: SchemeType
+	url?: string    // URL can now be specified at any level
+	name?: string
+}
+
+export type Scheme = ObjectScheme | StringScheme | ListScheme
+
+export interface ObjectScheme extends BaseScheme {
+	type: SchemeType.Object
+	fields: InsKVPair[]
+}
+
+export interface ListScheme extends BaseScheme {
+	type: SchemeType.List
+	element_scheme?: Scheme
+	path?: string
+}
+
+export interface StringScheme extends BaseScheme {
+	type: SchemeType.String
+	path?: string
+	mode: 'INNER_HTML' | 'SRC'
 }
 
 export enum SchemeType {
@@ -79,28 +109,4 @@ export function emptyScheme(kind: SchemeType): Scheme {
 export interface InsKVPair {
 	key: string
 	value?: Scheme
-}
-
-export interface ObjectScheme {
-	type: SchemeType.Object
-	fields: InsKVPair[]
-}
-
-export interface ListScheme {
-	type: SchemeType.List
-	element_scheme?: Scheme,
-	path?: string
-}
-
-export interface StringScheme {
-	type: SchemeType.String
-	path?: string,
-	mode: 'INNER_HTML' | 'SRC'
-}
-
-export type Scheme = ObjectScheme | StringScheme | ListScheme
-
-export interface Instructions {
-	url: string,
-	scheme: Scheme
 }

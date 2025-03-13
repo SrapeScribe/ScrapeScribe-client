@@ -2,13 +2,11 @@
     import {onMount} from 'svelte'
     import {goto} from '$app/navigation'
     import {projectStore} from "$lib/states/project.svelte"
-    import {endpointStore} from "$lib/states/endpoints.svelte"
-    import {auth, handleSignIn, handleSignOut} from "$lib/states/auth.svelte"
+    import {endpointStore} from "$lib/states/endpoint.svelte.js"
 
     let newProjectName = $state('')
     let isCreating = $state(false)
 
-    // Derived values from stores
     let projectsData = $derived(projectStore.projects)
     let isLoading = $derived(projectStore.isLoading)
 

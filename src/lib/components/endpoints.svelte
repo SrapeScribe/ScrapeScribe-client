@@ -1,7 +1,7 @@
 <script lang="ts">
     import {cn} from '$lib/utils.js'
     import EndpointCard from './endpoint-card.svelte'
-    import {endpointStore} from "$lib/states/endpoints.svelte"
+    import {endpointStore} from "$lib/states/endpoint.svelte.js"
     import {projectStore} from "$lib/states/project.svelte"
 
     let props = $props<{
@@ -142,10 +142,11 @@
         </div>
 
         <!-- Endpoints list -->
-        {#if endpointsData.length > 0}
+        {#if projectData && endpointsData.length > 0}
             {#each endpointsData as _, i (endpointsData[i].id)}
                 <EndpointCard
                         endpoint={endpointsData[i]}
+                        currentProject={projectData}
                 />
             {/each}
         {:else}

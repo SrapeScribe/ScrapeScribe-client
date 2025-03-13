@@ -2,20 +2,19 @@
     import * as Accordion from '$lib/components/ui/accordion'
     import {slide} from 'svelte/transition'
     import {METHOD_STYLES} from '$lib/constants'
-    import type {Endpoint} from "$lib/interfaces"
+    import type {Endpoint, Project} from "$lib/interfaces"
     import {setContext} from "svelte"
-    import {projectStore} from "$lib/states/project.svelte"
-    import {endpointStore} from "$lib/states/endpoints.svelte"
-    import {CircleMinus} from "lucide-svelte"
-
-    let projectData = $derived(projectStore.currentProject)
+    import {endpointStore} from "$lib/states/endpoint.svelte.js"
+    import {goto} from "$app/navigation"
+    // import Editor from "$lib/components/instruction-editor/Editor.svelte"
 
     let props = $props<{
+        currentProject?: Project,
         endpoint: Endpoint;
         class?: string;
     }>()
 
-    let {endpoint, class: className = ''}: {endpoint: Endpoint, class: string} = props
+    let {currentProject, endpoint, class: className = ''}: { currentProject: Project, endpoint: Endpoint, class: string } = props
     setContext('endpoint', endpoint)
 
     let activeAccordionItems = $state<string[]>([])
@@ -27,7 +26,7 @@
     const validatePath = (path: string): string | null => {
         if (!path.trim()) return "Path cannot be empty"
         if (path === endpoint.path) return "Path must be different from current"
-        if (!/^\/[a-zA-Z0-9-_/]*$/.test(path)) return "Path must start with / and contain only letters, numbers, hyphens, and underscores"
+        if (!/^[a-zA-Z0-9-_]*$/.test(path)) return "Path must contain only letters, numbers, hyphens, and underscores"
         return null
     }
 
@@ -71,12 +70,10 @@
 
     async function toggleEndpointStatus() {
         try {
-            await endpointStore.updateEndpoint({
-                endpoint: {
-                    id: endpoint.id,
-                    is_active: !endpoint.is_active
-                }
-            })
+            await endpointStore.toggleEndpointStatus(
+                endpoint.id,
+                !endpoint.is_active
+            )
         } catch (error) {
             console.error("Failed to toggle status:", error)
         }
@@ -182,7 +179,12 @@
     {/if}
 
     <div class="action-buttons flex gap-2">
-
+        <button
+                class="save-button p-4 rounded-lg bg-slate-100 hover:bg-slate-200 w-14 h-14"
+                onclick={() => goto(`/projects/${currentProject.slug}/${endpoint.path}`)}
+        >
+            📂
+        </button>
         {#if isEditingPath}
             <button
                     onclick={saveChanges}

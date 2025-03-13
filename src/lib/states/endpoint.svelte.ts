@@ -23,8 +23,7 @@ class EndpointStore {
         await this.loadEndpoints(projectId)
     }
 
-    /**
-     * Load all endpoints for a specific project
+    /**     * Load all endpoints for a specific project
      */
     async loadEndpoints(projectId: string) {
         if (!projectId) return
@@ -95,8 +94,8 @@ class EndpointStore {
     /**
      * Update an existing endpoint
      */
-    async updateEndpoint({endpoint}: {endpoint: Partial<Endpoint>}) {
-        const {id: endpointId, method, path, description, is_active } = endpoint
+    async updateEndpoint({endpoint}: { endpoint: Partial<Endpoint> }) {
+        const {id: endpointId, method, path, description, is_active} = endpoint
         if (!endpointId) {
             throw new Error("Endpoint ID is required")
         }
@@ -105,6 +104,35 @@ class EndpointStore {
 
         try {
             const updatedEndpoint = await apiClient.endpointApi.update(endpointId, method, path, description, is_active)
+            this.endpoints = this.endpoints.map(e =>
+                e.id === endpointId ? {...e, ...updatedEndpoint} : e
+            )
+            if (this.currentEndpoint?.id === endpointId) {
+                this.currentEndpoint = updatedEndpoint
+            }
+            this.error = null
+            return updatedEndpoint
+        } catch (error: any) {
+            this.error = error.message || "An unknown error occurred"
+            console.error("[EndpointStore]", error)
+            throw error
+        } finally {
+            this.isLoading = false
+        }
+    }
+
+    /**
+     * Toggle the status of an endpoint
+     */
+    async toggleEndpointStatus(endpointId: string, is_active: boolean) {
+        if (!endpointId) {
+            throw new Error("Endpoint ID is required")
+        }
+
+        this.isLoading = true
+
+        try {
+            const updatedEndpoint = await apiClient.endpointApi.toggleStatus(endpointId, is_active)
             this.endpoints = this.endpoints.map(e =>
                 e.id === endpointId ? {...e, ...updatedEndpoint} : e
             )
