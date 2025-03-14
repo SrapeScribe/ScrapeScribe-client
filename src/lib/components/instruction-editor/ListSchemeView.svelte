@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {emptyScheme, type ListScheme, type SchemeType} from "../../../interfaces";
+    import {emptyScheme, type ListScheme, type SchemeType} from "$lib/interfaces";
     import SchemeView from "./SchemeView.svelte";
     import Dropdown from "./Dropdown.svelte";
 

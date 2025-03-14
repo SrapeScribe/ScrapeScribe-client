@@ -1,12 +1,15 @@
 <script lang="ts">
-    import * as Accordion from '$lib/components/ui/accordion'
     import {slide} from 'svelte/transition'
-    import {METHOD_STYLES} from '$lib/constants'
     import type {Endpoint, Project} from "$lib/interfaces"
     import {setContext} from "svelte"
     import {endpointStore} from "$lib/states/endpoint.svelte.js"
     import {goto} from "$app/navigation"
-    // import Editor from "$lib/components/instruction-editor/Editor.svelte"
+    import Editor from "$lib/components/instruction-editor/Editor.svelte"
+
+    // Shadcn/svelte
+    import * as Card from '$lib/components/ui/card'
+    import * as Accordion from '$lib/components/ui/accordion'
+    import {getMethodStyle} from "$lib/utils"
 
     let props = $props<{
         currentProject?: Project,
@@ -14,7 +17,11 @@
         class?: string;
     }>()
 
-    let {currentProject, endpoint, class: className = ''}: { currentProject: Project, endpoint: Endpoint, class: string } = props
+    let {currentProject, endpoint, class: className = ''}: {
+        currentProject: Project,
+        endpoint: Endpoint,
+        class: string
+    } = props
     setContext('endpoint', endpoint)
 
     let activeAccordionItems = $state<string[]>([])
@@ -25,7 +32,7 @@
 
     const validatePath = (path: string): string | null => {
         if (!path.trim()) return "Path cannot be empty"
-        if (path === endpoint.path) return "Path must be different from current"
+        // if (path === endpoint.path) return "Path must be different from current"
         if (!/^[a-zA-Z0-9-_]*$/.test(path)) return "Path must contain only letters, numbers, hyphens, and underscores"
         return null
     }
@@ -95,10 +102,14 @@
     {#if isEditingPath}
         <div class="path-editor flex flex-col gap-2 w-full ">
             <div class="flex items-center gap-2 bg-slate-100 rounded-lg p-3 h-14">
-                <span class={`method-badge px-2 py-1 rounded text-sm font-mono ${METHOD_STYLES[endpoint.method]}`}>
+                <span class={`method-badge px-2 py-1 rounded text-sm font-mono ${getMethodStyle(endpoint.method)}`}>
                     {endpoint.method}
                 </span>
-
+                <span class="max-w-[300px] text-gray-700 truncate">
+                            <!--Mock Path-->
+                    {currentProject.slug}.scrapescribe.oi/
+                        </span>
+                <!--Mock Path-->
                 <input
                         type="text"
                         class="py-1 pl-2 rounded-sm bg-white outline-none"
@@ -136,11 +147,12 @@
                         class="w-full rounded-lg bg-slate-100 hover:bg-slate-200 p-3 h-14 transition-colors hover:no-underline"
                 >
                     <div class="flex items-center gap-2">
-                        <span class={`px-2 py-1 rounded text-sm font-mono ${METHOD_STYLES[endpoint.method]}`}>
+                        <span class={`px-2 py-1 rounded text-sm font-mono ${getMethodStyle(endpoint.method)}`}>
                             {endpoint.method}
                         </span>
-                        <span class="max-w-[200px] text-md text-gray-700 truncate">
-                            {endpoint.path}
+                        <span class="max-w-[300px] text-md text-gray-700 truncate">
+                            <!--Mock Path-->
+                            {currentProject.slug}.scrapescribe.oi/{endpoint.path}
                         </span>
                         <span class={endpoint.is_active ? 'text-green-600 ml-auto' : 'text-gray-400 ml-auto'}>
                             {endpoint.is_active ? '✓' : '○'}
@@ -152,24 +164,37 @@
                     {#snippet child({props: contentProps, open, close})}
                         {#if open}
                             <div {...contentProps} transition:slide={{ duration: 200 }}>
-                                <div class="flex justify-between items-center mb-4">
-                                    <h4 class="text-lg font-medium">{endpoint.description || 'No description'}</h4>
-                                    <div class="flex gap-2">
-                                        <button
-                                                onclick={toggleEndpointStatus}
-                                                class="text-sm px-3 py-1 rounded bg-gray-100 hover:bg-gray-200"
-                                        >
-                                            {endpoint.is_active ? 'Deactivate' : 'Activate'}
-                                        </button>
-                                        <button
-                                                onclick={deleteEndpoint}
-                                                class="text-sm px-3 py-1 rounded bg-red-100 hover:bg-red-200 text-red-700"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-                                </div>
-                                <!--                                <Editor/>-->
+
+                                <!--Card for all content inside the accordion-->
+                                <Card.Root class="w-full">
+
+                                    <Card.Header>
+                                        <div class="flex justify-between items-center mb-4">
+                                            <h4 class="text-lg font-medium">{endpoint.description || 'No description'}</h4>
+                                            <div class="flex gap-2">
+                                                <button
+                                                        onclick={toggleEndpointStatus}
+                                                        class="text-sm px-3 py-1 rounded bg-gray-100 hover:bg-gray-200"
+                                                >
+                                                    {endpoint.is_active ? 'Deactivate' : 'Activate'}
+                                                </button>
+                                                <button
+                                                        onclick={deleteEndpoint}
+                                                        class="text-sm px-3 py-1 rounded bg-red-100 hover:bg-red-200 text-red-700"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </Card.Header>
+
+                                    <Card.Content>
+                                        <Editor/>
+
+                                    </Card.Content>
+                                </Card.Root>
+
+
                             </div>
                         {/if}
                     {/snippet}

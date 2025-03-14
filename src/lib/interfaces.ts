@@ -42,6 +42,7 @@ export type InstructionSet = {
 	id: string
 	endpoint_id: string
 	schema: Record<string, any>
+	url: string,
 	created_at: string
 	updated_at: string
 	is_active: boolean
@@ -82,6 +83,8 @@ export enum SchemeType {
 	Object = 'OBJECT',
 	List = 'LIST',
 }
+
+export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'HEAD';
 
 export function emptyScheme(kind: SchemeType): Scheme {
 	if (kind === SchemeType.String) {

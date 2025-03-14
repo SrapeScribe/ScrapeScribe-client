@@ -387,7 +387,7 @@ class AuthApiClient {
             ),
 
         getByEndpointId: (endpointId: string) =>
-            this.getArray<InstructionSet>(
+            this.get<InstructionSet>(
                 'app_private',
                 'get_instruction_sets_by_endpoint',
                 [endpointId]
