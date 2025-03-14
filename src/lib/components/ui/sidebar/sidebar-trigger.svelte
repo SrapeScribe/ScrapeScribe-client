@@ -26,7 +26,7 @@
 	data-sidebar="trigger"
 	variant="ghost"
 	size="icon"
-	class={cn("h-7 w-7", className)}
+	class={cn("h-8 w-8", className)}
 	{...restProps}
 >
 	<PanelLeft />
