@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { SchemeType } from "./interfaces";
+    import type { SchemeType } from "./lib/interfaces";
 
     let { onSelect } = $props()
 
