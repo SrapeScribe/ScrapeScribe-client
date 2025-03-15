@@ -65,6 +65,9 @@
         } else if (password.length < 8) {
             passwordError = 'Password must be at least 8 characters'
             isValid = false
+        } else if (!/[!@#$%^&*]/.test(password)) {
+            passwordError = 'Password must have at least one symbol character'
+            isValid = false
         }
 
         if (password !== confirmPassword) {
@@ -130,7 +133,7 @@
 
             if (success) {
                 console.log("📍 Sign up confirmation completed, redirecting to sign in")
-                await goto('/profile')
+                await goto('/sign-in')
             }
         } finally {
             isConfirming = false

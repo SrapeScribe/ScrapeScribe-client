@@ -1,7 +1,12 @@
 import { configureAmplify } from '$lib/aws-amplify';
 
-// Configuring Amplify before the app mounts
-configureAmplify();
+try {
+    configureAmplify();
+
+    console.log("🚀 AWS Amplify initialized successfully");
+} catch (error) {
+    console.error("🚨 Failed to initialize AWS Amplify:", error);
+}
 
 // fuck server-side rendering
 export const ssr = false;

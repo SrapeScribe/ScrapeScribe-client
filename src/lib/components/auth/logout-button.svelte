@@ -3,23 +3,23 @@
     import LogOut from "lucide-svelte/icons/log-out"
     import {goto} from "$app/navigation"
 
-    let isSigningOut = $state(false);
-    const authState = $derived(authStore.authState);
+    let isSigningOut = $state(false)
+    const authState = $derived(authStore.authState)
 
     async function handleSignOut() {
-        console.log("❌ Sign out requested");
-        isSigningOut = true;
+        console.log("❌ Sign out requested")
+        isSigningOut = true
 
         try {
-            const success = await authStore.handleSignOut();
-            console.log("❌ Sign out result:", success);
+            const success = await authStore.handleSignOut()
+            console.log("❌ Sign out result:", success)
 
             if (success) {
-                console.log("❌ Signed out successfully, redirecting to sign in");
-                goto('/sign-in');
+                console.log("❌ Signed out successfully, redirecting to sign in")
+                await goto('/sign-in')
             }
         } finally {
-            isSigningOut = false;
+            isSigningOut = false
         }
     }
 

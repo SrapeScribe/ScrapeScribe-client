@@ -10,24 +10,17 @@
     let userId = $derived(authState.user?.userId || '');
 
 
-    let isSigningOut = $state(false);
-
     onMount(async () => {
         console.log("👤 Profile component mounted");
         await initializeProfile();
     });
 
     async function initializeProfile() {
+        // TODO: Possibly unnecessary, inspect and remove if not needed
         // Initialize auth if needed
         if (!authStore.initState.isInitialized) {
             console.log("🧩 Auth not initialized, initializing");
             await authStore.initialize();
-        }
-
-        // Redirect if not authenticated
-        if (!authState.isAuthenticated && !authState.isLoading) {
-            console.log("🧩 Not authenticated, redirecting to sign in");
-            goto('/sign-in');
         }
 
         // Fetch attributes if authenticated but no attributes yet
@@ -37,22 +30,6 @@
         }
     }
 
-    async function handleSignOut() {
-        console.log("🧩 Sign out requested");
-        isSigningOut = true;
-
-        try {
-            const success = await authStore.handleSignOut();
-            console.log("🧩 Sign out result:", success);
-
-            if (success) {
-                console.log("🧩 Signed out successfully, redirecting to sign in");
-                goto('/sign-in');
-            }
-        } finally {
-            isSigningOut = false;
-        }
-    }
 </script>
 
 <svelte:head>
