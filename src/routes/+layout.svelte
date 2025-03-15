@@ -4,7 +4,6 @@
     import {Provider} from '$lib/components/ui/sidebar/index.js'
     import AppSidebar from '$lib/components/app-sidebar.svelte'
     import Navbar from '$lib/components/navbar.svelte'
-    import ErrorMessage from '$lib/components/auth/error-message.svelte'
     import {Toaster} from 'svelte-sonner'
     import {onMount} from "svelte"
     import {goto} from "$app/navigation"
