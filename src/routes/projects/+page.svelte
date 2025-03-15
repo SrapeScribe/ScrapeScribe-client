@@ -2,7 +2,6 @@
     import {onMount} from 'svelte'
     import {goto} from '$app/navigation'
     import {projectStore} from "$lib/states/project.svelte"
-    import {endpointStore} from "$lib/states/endpoint.svelte.js"
 
     let newProjectName = $state('')
     let isCreating = $state(false)
