@@ -3,6 +3,11 @@
     import {goto} from '$app/navigation'
     import {authStore} from '$lib/states/auth.svelte'
 
+    import {Input} from "$lib/components/ui/input"
+    import {Label} from "$lib/components/ui/label"
+    import {Button} from "$lib/components/ui/button"
+    import * as Card from "$lib/components/ui/card/index.js"
+
     // Form state
     let email = $state('')
     let password = $state('')
@@ -97,65 +102,71 @@
     <title>Sign In</title>
 </svelte:head>
 
-<div>
-    <h1>Sign In</h1>
-
-    <!-- global store loading state -->
-    {#if authState.isLoading}
-        <div>Loading authentication state...</div>
-    {/if}
-
-    <!-- errors from auth store -->
-    {#if signInState.error}
-        <div>
-            <p>{signInState.error}</p>
-        </div>
-    {/if}
-
-    <form onsubmit={handleSignIn}>
-        <div>
-            <label for="email">Email</label>
-            <input
-                    type="email"
-                    id="email"
-                    bind:value={email}
-                    oninput={handleEmailChange}
-                    disabled={isSubmitting || signInState.isLoading}
-                    placeholder="Enter your email"
-            />
-            {#if emailError}
-                <p>{emailError}</p>
-            {/if}
-        </div>
-
-        <div>
-            <label for="password">Password</label>
-            <input
-                    type="password"
-                    id="password"
-                    bind:value={password}
-                    oninput={handlePasswordChange}
-                    disabled={isSubmitting || signInState.isLoading}
-                    placeholder="Enter your password"
-            />
-            {#if passwordError}
-                <p>{passwordError}</p>
-            {/if}
-        </div>
-
-        <button
-                type="submit"
-                disabled={isSubmitting || signInState.isLoading}
-        >
-            {#if isSubmitting || signInState.isLoading}
-                Signing In...
-            {:else}
-                Sign In
-            {/if}
-        </button>
-    </form>
-
+<!-- global store loading state -->
+{#if authState.isLoading}
+    <div>Loading authentication state...</div>
+{/if}
+<!-- errors from auth store -->
+{#if signInState.error}
     <div>
-        <a href="/sign-up">Don't have an account? Sign up</a>
+        <p>{signInState.error}</p>
     </div>
-</div>
+{/if}
+<Card.Root class="max-w-md mx-auto px-8 py-4">
+    <Card.Header>
+        <Card.Title class="text-sm font-bold">Sign In</Card.Title>
+        <Card.Description>Log in into your account or <a class="underline" href="/sign-up">create new</a>
+        </Card.Description>
+
+    </Card.Header>
+    <Card.Content>
+        <form onsubmit={handleSignIn}>
+            <div class="grid gap-4">
+                <div class="flex flex-col space-y-1.5">
+                    <Label for="email">Email</Label>
+                    <Input
+                            type="email"
+                            id="email"
+                            bind:value={email}
+                            oninput={handleEmailChange}
+                            disabled={isSubmitting || signInState.isLoading}
+                            placeholder="Enter your email"
+                    />
+                    {#if emailError}
+                        <p>{emailError}</p>
+                    {/if}
+                </div>
+
+                <div class="flex flex-col space-y-1.5">
+                    <Label for="password">Password</Label>
+                    <Input
+                            type="password"
+                            id="password"
+                            bind:value={password}
+                            oninput={handlePasswordChange}
+                            disabled={isSubmitting || signInState.isLoading}
+                            placeholder="Enter your password"
+                    />
+                    {#if passwordError}
+                        <p>{passwordError}</p>
+                    {/if}
+                </div>
+
+                <Button
+                        type="submit"
+                        disabled={isSubmitting || signInState.isLoading}
+                >
+                    {#if isSubmitting || signInState.isLoading}
+                        Signing In...
+                    {:else}
+                        Sign In
+                    {/if}
+                </Button>
+            </div>
+        </form>
+
+        <div class="mt-3">
+            <a href="/sign-up">Don't have an account? Sign up</a>
+        </div>
+    </Card.Content>
+</Card.Root>

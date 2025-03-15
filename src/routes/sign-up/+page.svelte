@@ -3,6 +3,13 @@
     import {goto} from '$app/navigation'
     import {authStore} from '$lib/states/auth.svelte'
 
+    import {Input} from "$lib/components/ui/input"
+    import {Label} from "$lib/components/ui/label"
+    import {Button} from "$lib/components/ui/button"
+    import * as Card from "$lib/components/ui/card"
+    import * as Alert from '$lib/components/ui/alert'
+    import * as InputOTP from "$lib/components/ui/input-otp"
+
     // Form state
     let email = $state('')
     let password = $state('')
@@ -157,116 +164,152 @@
     <title>Sign Up</title>
 </svelte:head>
 
-<div>
-    <h1>Sign Up</h1>
 
-    <!-- global loading state -->
-    {#if authState.isLoading}
-        <div>Loading authentication state...</div>
-    {/if}
+<!-- global loading state -->
+{#if authState.isLoading}
+    <div>Loading authentication state...</div>
+{/if}
 
-    <!-- errors from auth store -->
-    {#if signUpState.error}
-        <div>
-            <p>{signUpState.error}</p>
-        </div>
+<!-- errors from auth store -->
+{#if signUpState.error}
+    <div>
+        <p>{signUpState.error}</p>
+    </div>
+{/if}
+<Card.Root class="max-w-md mx-auto px-8 py-4">
+
+    {#if !signUpState.isConfirmRequired}
+
+        <Card.Header>
+
+            <Card.Title class="text-sm font-bold">Sign Up</Card.Title>
+            <Card.Description>Create new account or <a class="underline" href="/sign-in">sign in</a>
+            </Card.Description>
+        </Card.Header>
+    {:else}
+        <Alert.Root>
+            <Alert.Title>Please check your email!</Alert.Title>
+            <Alert.Description>
+                A verification code has been sent to your email. Please enter it below to confirm your account.
+            </Alert.Description>
+        </Alert.Root>
     {/if}
 
     {#if signUpState.isConfirmRequired}
         <!-- Confirmation Form -->
-        <div>
-            <p>A verification code has been sent to your email. Please enter it below to confirm your account.</p>
-        </div>
 
-        <form onsubmit={handleConfirmSignUp}>
-            <div>
-                <label for="confirmationCode">Verification Code</label>
-                <input
-                        type="text"
-                        id="confirmationCode"
-                        bind:value={confirmationCode}
-                        oninput={handleConfirmationCodeChange}
-                        disabled={isConfirming || signUpState.isLoading}
-                        placeholder="Enter verification code"
-                />
-                {#if confirmationCodeError}
-                    <p>{confirmationCodeError}</p>
-                {/if}
-            </div>
+        <Card.Content>
 
-            <button
-                    type="submit"
-                    disabled={isConfirming || signUpState.isLoading}
-            >
-                {#if isConfirming || signUpState.isLoading}
-                    Confirming...
-                {:else}
-                    Confirm Sign Up
-                {/if}
-            </button>
-        </form>
+            <form onsubmit={handleConfirmSignUp}>
+                <div class="grid gap-4">
+
+                    <div class="flex flex-col space-y-1.5">
+                        <Label for="confirmationCode" class="mx-auto mb-3">Verification Code</Label>
+                        <InputOTP.Root
+                                class="mx-auto"
+                                maxlength={6} bind:value={confirmationCode} disabled={isConfirming || signUpState.isLoading} oninput={handleConfirmationCodeChange} id="confirmationCode">
+                            {#snippet children({ cells })}
+                                <InputOTP.Group>
+                                    {#each cells.slice(0, 3) as cell}
+                                        <InputOTP.Slot {cell} />
+                                    {/each}
+                                </InputOTP.Group>
+                                <InputOTP.Separator />
+                                <InputOTP.Group>
+                                    {#each cells.slice(3, 6) as cell}
+                                        <InputOTP.Slot {cell} />
+                                    {/each}
+                                </InputOTP.Group>
+                            {/snippet}
+                        </InputOTP.Root>
+                        {#if confirmationCodeError}
+                            <p>{confirmationCodeError}</p>
+                        {/if}
+                    </div>
+
+                    <span class="text-secondary-foreground text-sm">Please enter the one-time password sent to your email.</span>
+
+                    <Button
+                            type="submit"
+                            disabled={isConfirming || signUpState.isLoading}
+                    >
+                        {#if isConfirming || signUpState.isLoading}
+                            Confirming...
+                        {:else}
+                            Confirm Sign Up
+                        {/if}
+                    </Button>
+                </div>
+            </form>
+        </Card.Content>
     {:else}
         <!-- Sign Up Form -->
-        <form onsubmit={handleSignUp}>
-            <div>
-                <label for="email">Email</label>
-                <input
-                        type="email"
-                        id="email"
-                        bind:value={email}
-                        oninput={handleEmailChange}
-                        disabled={isSubmitting || signUpState.isLoading}
-                        placeholder="Enter your email"
-                />
-                {#if emailError}
-                    <p>{emailError}</p>
-                {/if}
-            </div>
+        <Card.Content>
 
-            <div>
-                <label for="password">Password</label>
-                <input
-                        type="password"
-                        id="password"
-                        bind:value={password}
-                        oninput={handlePasswordChange}
-                        disabled={isSubmitting || signUpState.isLoading}
-                        placeholder="Enter your password"
-                />
-                {#if passwordError}
-                    <p>{passwordError}</p>
-                {/if}
-            </div>
+            <form onsubmit={handleSignUp}>
+                <div class="grid gap-4">
+                    <div class="flex flex-col space-y-1.5">
+                        <Label for="email">Email</Label>
+                        <Input
+                                type="email"
+                                id="email"
+                                bind:value={email}
+                                oninput={handleEmailChange}
+                                disabled={isSubmitting || signUpState.isLoading}
+                                placeholder="Enter your email"
+                        />
+                        {#if emailError}
+                            <p>{emailError}</p>
+                        {/if}
+                    </div>
 
-            <div>
-                <label for="confirmPassword">Confirm Password</label>
-                <input
-                        type="password"
-                        id="confirmPassword"
-                        bind:value={confirmPassword}
-                        oninput={handleConfirmPasswordChange}
-                        disabled={isSubmitting || signUpState.isLoading}
-                        placeholder="Confirm your password"
-                />
-                {#if confirmPasswordError}
-                    <p>{confirmPasswordError}</p>
-                {/if}
-            </div>
+                    <div class="flex flex-col space-y-1.5">
+                        <Label for="password">Password</Label>
+                        <Input
+                                type="password"
+                                id="password"
+                                bind:value={password}
+                                oninput={handlePasswordChange}
+                                disabled={isSubmitting || signUpState.isLoading}
+                                placeholder="Enter your password"
+                        />
+                        {#if passwordError}
+                            <p>{passwordError}</p>
+                        {/if}
+                    </div>
 
-            <button
-                    type="submit"
-                    disabled={isSubmitting || signUpState.isLoading}
-            >
-                {#if isSubmitting || signUpState.isLoading}
-                    Signing Up...
-                {:else}
-                    Sign Up
-                {/if}
-            </button>
-        </form>
+                    <div class="flex flex-col space-y-1.5">
+                        <Label for="confirmPassword">Confirm Password</Label>
+                        <Input
+                                type="password"
+                                id="confirmPassword"
+                                bind:value={confirmPassword}
+                                oninput={handleConfirmPasswordChange}
+                                disabled={isSubmitting || signUpState.isLoading}
+                                placeholder="Confirm your password"
+                        />
+                        {#if confirmPasswordError}
+                            <p>{confirmPasswordError}</p>
+                        {/if}
+                    </div>
+
+                    <Button
+                            type="submit"
+                            disabled={isSubmitting || signUpState.isLoading}
+                    >
+                        {#if isSubmitting || signUpState.isLoading}
+                            Signing Up...
+                        {:else}
+                            Sign Up
+                        {/if}
+                    </Button>
+                </div>
+            </form>
+        </Card.Content>
+        <Card.Footer>
+            <a href="/sign-in">Already have an account? Sign in</a>
+        </Card.Footer>
     {/if}
 
-    <div>
-        <a href="/sign-in">Already have an account? Sign in</a>
-    </div>
-</div>
+
+</Card.Root>
