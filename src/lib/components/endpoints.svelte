@@ -1,14 +1,16 @@
 <script lang="ts">
-    import {cn} from '$lib/utils.js'
+    import { cn } from '$lib/utils.js'
     import EndpointCard from './endpoint-card.svelte'
-    import {endpointStore} from "$lib/states/endpoint.svelte.js"
-    import {projectStore} from "$lib/states/project.svelte"
+    import { endpointStore } from "$lib/states/endpoint.svelte.js"
+    import { projectStore } from "$lib/states/project.svelte"
+    import * as Alert from '$lib/components/ui/alert/index.js'
+    import { CircleAlert } from 'lucide-svelte'
 
     let props = $props<{
         class?: string;
     }>()
 
-    let {class: className, ...restProps} = props
+    let { class: className, ...restProps } = props
 
     // State from the endpoint store
     let endpointsData = $derived(endpointStore.endpoints)
@@ -24,18 +26,27 @@
         description: ''
     })
     let formError: string | null = $state(null)
+    let isCreating = $state(false)
 
     async function createEndpoint(e: Event) {
         e.preventDefault()
 
-        if (!projectData) return
+        if (!projectData) {
+            console.error("Endpoints: Cannot create endpoint - no active project")
+            formError = "No active project"
+            return
+        }
 
-        const {method, path, description} = newEndpoint
+        const { method, path, description } = newEndpoint
 
         if (!path.trim()) {
             formError = "Endpoint path is required"
             return
         }
+
+        console.log(`Endpoints: Creating new endpoint ${method} ${path} for project ${projectData.id}`)
+        formError = null
+        isCreating = true
 
         try {
             await endpointStore.addEndpoint(
@@ -44,6 +55,9 @@
                 path.trim(),
                 description.trim() || undefined
             )
+
+            console.log("Endpoints: Endpoint created successfully")
+
             // Reset form
             newEndpoint = {
                 method: 'GET',
@@ -51,11 +65,28 @@
                 description: ''
             }
             showEndpointForm = false
-            formError = null
         } catch (err) {
+            console.error("Endpoints: Failed to create endpoint", err)
             formError = err instanceof Error
                 ? err.message
                 : 'Failed to create endpoint'
+        } finally {
+            isCreating = false
+        }
+    }
+
+    function toggleEndpointForm() {
+        console.log(`Endpoints: ${showEndpointForm ? 'Hiding' : 'Showing'} endpoint form`)
+        showEndpointForm = !showEndpointForm
+
+        if (!showEndpointForm) {
+            // Reset form when hiding
+            newEndpoint = {
+                method: 'GET',
+                path: '',
+                description: ''
+            }
+            formError = null
         }
     }
 </script>
@@ -64,20 +95,22 @@
     {#if isLoading}
         <div class="py-4">Loading endpoints...</div>
     {:else if error}
-        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 my-4" role="alert">
-            <p>{error}</p>
-        </div>
+        <Alert.Root variant="destructive" class="mb-4">
+            <CircleAlert class="size-4" />
+            <Alert.Title>Error</Alert.Title>
+            <Alert.Description>{error}</Alert.Description>
+        </Alert.Root>
     {:else}
         <div class="pt-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-semibold">Endpoints</h3>
-                    <button
-                            onclick={() => showEndpointForm = !showEndpointForm}
-                            disabled={isLoading || !projectData}
-                            class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 disabled:bg-blue-300"
-                    >
-                        {showEndpointForm ? '➖ Cancel' : '➕ Add Endpoint'}
-                    </button>
+                <button
+                        onclick={toggleEndpointForm}
+                        disabled={isLoading || !projectData}
+                        class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 disabled:bg-blue-300"
+                >
+                    {showEndpointForm ? '➖ Cancel' : '➕ Add Endpoint'}
+                </button>
             </div>
 
             <!-- New Endpoint Form -->
@@ -128,31 +161,36 @@
                     <div class="mt-4 flex justify-end">
                         <button
                                 type="submit"
-                                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300"
+                                disabled={isCreating}
                         >
-                            Create Endpoint
+                            {isCreating ? 'Creating...' : 'Create Endpoint'}
                         </button>
                     </div>
                 </form>
             {/if}
 
             {#if formError}
-                <p class="text-red-500 mt-2">{formError}</p>
+                <Alert.Root variant="destructive" class="mb-4">
+                    <CircleAlert class="size-4" />
+                    <Alert.Title>Error</Alert.Title>
+                    <Alert.Description>{formError}</Alert.Description>
+                </Alert.Root>
             {/if}
         </div>
 
         <!-- Endpoints list -->
         {#if projectData && endpointsData.length > 0}
-            {#each endpointsData as _, i (endpointsData[i].id)}
+            {#each endpointsData as endpoint (endpoint.id)}
                 <EndpointCard
-                        endpoint={endpointsData[i]}
+                        endpoint={endpoint}
                         currentProject={projectData}
                 />
             {/each}
-        {:else}
+        {:else if projectData}
             <div class="bg-gray-100 p-6 text-center rounded-lg">
                 <p class="text-gray-600">This project doesn't have any endpoints yet.</p>
-                <p class="text-sm text-gray-500 mt-2">Add an endpoint below to get started.</p>
+                <p class="text-sm text-gray-500 mt-2">Add an endpoint above to get started.</p>
             </div>
         {/if}
     {/if}

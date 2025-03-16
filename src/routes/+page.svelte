@@ -6,8 +6,8 @@
 
 <main>
     <h1>Page {i}</h1>
-    <button on:click={() => i += 1}>Increment</button>
-    <button on:click={() => i -= 1}>Decrement</button>
+    <button onclick={() => i += 1}>Increment</button>
+    <button onclick={() => i -= 1}>Decrement</button>
 
     <h2>{greet("Webassembly")}</h2>
 </main>

@@ -1,112 +1,91 @@
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
-import {type HTTPMethod, type Instructions, type Scheme, SchemeType} from "$lib/interfaces"
-import {METHOD_STYLES} from "$lib/constants"
+import {type HTTPMethod, METHOD_STYLES} from "$lib/constants"
 
-export function cn(...inputs: ClassValue[]) {
-	return twMerge(clsx(inputs));
-}
-
+/**
+ * Capitalize the first letter of a string
+ * @param str
+ * @returns Capitalized string
+ */
 export function capitalize(str: string): string {
 	return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+/**
+ * Converts a string to a URL-friendly slug
+ * @param text Input string to convert to slug
+ * @returns A URL-friendly slug
+ */
+export function generateSlug(text: string): string {
+	return text.toLowerCase()
+		.trim()
+		.replace(/\s+/g, "-")           // Replace spaces with hyphens
+		.replace(/[^a-z0-9-]/g, "")     // Remove any non-alphanumeric chars except hyphens
+		.replace(/-+/g, "-")            // Replace multiple hyphens with single hyphen
+		.replace(/^-|-$/g, "");         // Remove leading and trailing hyphens
+}
+
+/**
+ * Get the style for an HTTP method badge
+ * @param method HTTP method
+ * @returns Style for the badge
+ */
 export const getMethodStyle = (method: string) =>
 	METHOD_STYLES[method as HTTPMethod] || "bg-gray-300 text-black";
 
-export function cleanJsonString(str: string): string {
-	return str.replace(/,(\s*[}\]])/g, '$1');
+/**
+ * Clean JSON string by removing trailing commas
+ * @param jsonString JSON string to clean
+ * @returns Cleaned JSON string
+ */
+export function cleanJsonString(jsonString: string): string {
+	// Remove trailing commas from objects and arrays
+	return jsonString.replace(/,(\s*[}\]])/g, '$1');
 }
 
 /**
- * Create empty instructions structure
+ * Merge CSS class names conditionally
+ * @param inputs Class names or conditions
+ * @returns Merged class names
  */
-export function createEmptyInstructions(): { url: string; scheme: { type: SchemeType; fields: any[] } } {
-	return {
-		url: '',
-		scheme: {
-			type: 'OBJECT' as SchemeType,
-			fields: []
-		}
+export function cn(...inputs: (string | boolean | undefined | null)[]): string {
+	return inputs.filter(Boolean).join(' ');
+}
+
+/**
+ * Format date to a readable string
+ * @param date Date to format
+ * @param options Format options
+ * @returns Formatted date string
+ */
+export function formatDate(date: Date | string, options: Intl.DateTimeFormatOptions = {}): string {
+	const dateObj = typeof date === 'string' ? new Date(date) : date;
+
+	const defaultOptions: Intl.DateTimeFormatOptions = {
+		year: 'numeric',
+		month: 'short',
+		day: 'numeric',
+		...options
 	};
+
+	return new Intl.DateTimeFormat('en-US', defaultOptions).format(dateObj);
 }
 
 /**
- * Deep clone an object to avoid reference issues
+ * Truncate a string to a maximum length
+ * @param str String to truncate
+ * @param maxLength Maximum length
+ * @param suffix Suffix to add when truncated (default: "...")
+ * @returns Truncated string
  */
-export function deepClone<T>(obj: T): T {
-	return JSON.parse(JSON.stringify(obj));
+export function truncateString(str: string, maxLength: number, suffix: string = '...'): string {
+	if (str.length <= maxLength) return str;
+	return str.substring(0, maxLength - suffix.length) + suffix;
 }
 
 /**
- * Format time elapsed since a given date
+ * Delay execution for specified milliseconds
+ * @param ms Milliseconds to delay
+ * @returns Promise that resolves after the delay
  */
-export function formatTimeSince(date: Date | null): string {
-	if (!date) return "Never saved";
-
-	const now = new Date();
-	const diffMs = now.getTime() - date.getTime();
-
-	// Less than a minute
-	if (diffMs < 60000) {
-		return "Just now";
-	}
-
-	// Less than an hour
-	if (diffMs < 3600000) {
-		const minutes = Math.floor(diffMs / 60000);
-		return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
-	}
-
-	// Format as time
-	return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-/**
- * Safely update a nested field within instructions without
- * causing unexpected state updates in other parts
- */
-export function updateSchemeField(
-	schema: Scheme,
-	path: string[],
-	value: any
-): Scheme {
-	// Clone to avoid reference issues
-	const newSchema = deepClone(schema);
-
-	// Base case: direct update
-	if (path.length === 0) {
-		return value;
-	}
-
-	let current: any = newSchema;
-	const lastKey = path[path.length - 1];
-
-	// Navigate to the parent of the field to update
-	for (let i = 0; i < path.length - 1; i++) {
-		const key = path[i];
-
-		// Special case for array indices
-		if (!isNaN(Number(key))) {
-			const index = Number(key);
-			if (!Array.isArray(current)) {
-				throw new Error(`Expected array at path segment ${key}`);
-			}
-			if (index >= current.length) {
-				throw new Error(`Array index out of bounds: ${index}`);
-			}
-			current = current[index];
-		} else {
-			// Object property navigation
-			if (current[key] === undefined) {
-				current[key] = {};
-			}
-			current = current[key];
-		}
-	}
-
-	// Update the target field
-	current[lastKey] = value;
-
-	return newSchema;
+export function delay(ms: number): Promise<void> {
+	return new Promise(resolve => setTimeout(resolve, ms));
 }
