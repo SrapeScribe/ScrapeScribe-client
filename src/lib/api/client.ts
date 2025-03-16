@@ -450,6 +450,32 @@ class AuthApiClient {
                 [instructionSetId, targetEndpointId]
             )
     }
+
+    // TODO: change how projectName and endpointName are retrieved in the endpoint-card (or here)
+    // this is prob not ideal considering the other methods above but it should do for now
+    schedulingApi = {
+        schedule: async (projectName: string, endpointName: string, url: string, scheme: Record<string, any>, refreshPeriod: string) => {
+            const headers = await this.getAuthHeaders();
+            
+            const response = await this.fetch('https://su577lt3di.execute-api.eu-west-1.amazonaws.com/v1/api/schedule', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    project_name: projectName,
+                    endpoint_name: endpointName,
+                    url: url,
+                    scheme: scheme,
+                    refresh_period: refreshPeriod
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to schedule scrape: ${response.statusText}`);
+            }
+
+            return response.json();
+        }
+    }
 }
 
 // Create an API client instance that can be customized with SvelteKit's fetch

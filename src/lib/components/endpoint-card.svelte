@@ -13,6 +13,7 @@
 
     import {getMethodStyle} from "$lib/utils"
 	import Editor from './instruction-editor/Editor.svelte';
+	import { authApiClient } from '$lib/api/client';
 
     let props = $props<{
         currentProject: Project,
@@ -144,6 +145,28 @@
         console.log(`Endpoint card: Navigating to details for endpoint ${endpoint.id} in project ${currentProject.slug}`)
         goto(`/projects/${currentProject.slug}/${endpoint.path}`)
     }
+
+
+
+
+    async function scheduleScrape() {
+        const endpointName = endpoint.path
+        // could be passed in, isntead of fetched
+        const project = await authApiClient.projectApi.getById(endpoint.project_id)
+        const projectName = project.name
+        console.log("TOAST: project ok")
+
+        // could be passed in as well, rather than fetched
+        const instructionSet = await authApiClient.instructionSetApi.getByEndpointId(endpoint.id)
+
+        if (!instructionSet) {
+            throw new Error('No instruction set found for this endpoint');
+        }
+        console.log("TOAST: instruction set ok")
+
+        const res = await authApiClient.schedulingApi.schedule(projectName, endpointName, instructionSet.url, instructionSet.schema, 'rate(2 minutes)')
+        console.log("TOAST:", res)
+    }
 </script>
 
 <div class={`endpoint-container flex gap-2 rounded-lg ${className}`}>
@@ -255,6 +278,12 @@
                                         </div> -->
 
                                         <Editor endpointId={endpoint.id} />
+
+                                        <button
+                                            onclick={scheduleScrape}
+                                        >
+                                            DEPLOY
+                                        </button>
 
                                     </Card.Content>
                                 </Card.Root>

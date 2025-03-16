@@ -48,16 +48,13 @@
 
     async function saveInstructionSet() {
         if (!instructions) return
-        console.log("SAVING")
 
         try {
             if (!instructionSetId) {
                 const created = await authApiClient.instructionSetApi.create(endpointId, instructions.scheme, instructions.url)
                 instructionSetId = created.id
-                console.log("CREATED")
             } else {
                 await authApiClient.instructionSetApi.update(instructionSetId, instructions.scheme, instructions.url)
-                console.log("UPDATED")
             }
 
             
