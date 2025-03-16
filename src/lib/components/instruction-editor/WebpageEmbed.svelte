@@ -7,7 +7,8 @@
     
     const dispatch = createEventDispatcher();
     let iframe: HTMLIFrameElement;
-    let selectedElements: Set<HTMLElement> = new Set();
+    let currentSelectedElement: HTMLElement | null = null;
+    // let selectedElements: Set<HTMLElement> = new Set();
     let hoveredElement: HTMLElement | null = null;
     let iframeDoc: Document | null = null;
 
@@ -47,10 +48,10 @@
         if (!iframeDoc) return;
         const target = event.target as HTMLElement;
         if (target && target.tagName !== 'HTML' && target.tagName !== 'BODY') {
-            if (hoveredElement && selectedElements.has(hoveredElement)) {
+            if (hoveredElement && hoveredElement !== currentSelectedElement) {
                 removeHighlight(hoveredElement);
             }
-            if (!selectedElements.has(target)) {
+            if (target !== currentSelectedElement) {
                 highlightElement(target);
             }
             hoveredElement = target;
@@ -62,7 +63,7 @@
     function handleMouseOut(event: MouseEvent) {
         if (!iframeDoc) return;
         const target = event.target as HTMLElement;
-        if (target === hoveredElement && !selectedElements.has(target)) {
+        if (target === hoveredElement && target !== currentSelectedElement) {
             removeHighlight(target);
         }
         event.stopPropagation();
@@ -75,12 +76,20 @@
         const target = event.target as HTMLElement;
 
         if (target && target.tagName !== 'HTML' && target.tagName !== 'BODY') {
-            if (selectedElements.has(target)) {
+            if (target === currentSelectedElement) {
+                // Deselect if clicking the currently selected element
                 deselectElement(target);
+                currentSelectedElement = null;
             } else {
+                // Deselect previous element if exists
+                if (currentSelectedElement) {
+                    deselectElement(currentSelectedElement);
+                }
+                // Select new element
                 selectElement(target);
+                currentSelectedElement = target;
             }
-            dispatch('selectionChange', { selectedElements: Array.from(selectedElements) });
+            dispatch('selectionChange', { selectedElement: currentSelectedElement });
         }
     }
 
@@ -94,15 +103,13 @@
 
     function selectElement(element: HTMLElement) {
         element.classList.add('web-scraper-selected');
-        selectedElements.add(element);
-
-        console.log(getElementPath(element))
-        selectedElement.elem = element  // selectedElementHere
+        console.log(getElementPath(element));
+        selectedElement.elem = element;
     }
 
     function deselectElement(element: HTMLElement) {
         element.classList.remove('web-scraper-selected');
-        selectedElements.delete(element);
+        selectedElement.elem = null;
     }
 </script>
 
