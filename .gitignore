@@ -6,9 +6,5 @@ target
 .env
 .svelte-kit/**
 
-
-package.json
-package-lock.json
-bun.lockb
 #Testing purpose file
 src/routes/tester/**

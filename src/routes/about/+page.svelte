@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Heading_1 from "lucide-svelte/icons/heading-1";
 </script>
 <svelte:head>
     <title>ScrapeScribe - About</title>
