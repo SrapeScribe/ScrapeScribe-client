@@ -17,8 +17,9 @@
     let wasmModule: any
     let instructions = $state<Instructions | undefined>(undefined)
     let html = $state<string | undefined>(undefined)
+    let instructionSetId = $state<string | undefined>(undefined)
 
-        async function loadInstructionSet() {
+    async function loadInstructionSet() {
         try {
             const instructionSet = await authApiClient.instructionSetApi.getByEndpointId(endpointId)
             console.log("INSTRUCTION SET RECEIVED")
@@ -28,6 +29,8 @@
                     url: instructionSet.url,
                     scheme: instructionSet.schema as Scheme
                 }
+                console.log("instruction set ID", instructionSet.id)
+                instructionSetId = instructionSet.id
                 console.log("INSTRUCTIONS RECEIVED")
                 console.log(instructions)
                 await fetchHtml()
@@ -39,7 +42,27 @@
                 }
             }
         } catch (err) {
-            console.error('Error loading instruction set:', err)
+            console.error('error loading instruction set:', err)
+        }
+    }
+
+    async function saveInstructionSet() {
+        if (!instructions) return
+        console.log("SAVING")
+
+        try {
+            if (!instructionSetId) {
+                const created = await authApiClient.instructionSetApi.create(endpointId, instructions.scheme, instructions.url)
+                instructionSetId = created.id
+                console.log("CREATED")
+            } else {
+                await authApiClient.instructionSetApi.update(instructionSetId, instructions.scheme, instructions.url)
+                console.log("UPDATED")
+            }
+
+            
+        } catch (err) {
+            console.error('error saving instruction set:', err)
         }
     }
 
@@ -79,16 +102,14 @@
     function handleUpdate(event: Event) {
         // omfg typescript I DONT CAREEEEEEEEEEEEEE
         if (event.detail.endpointId === endpointId) {
-            console.log("UPDATE for editor", endpointId);
-            processInstructions();
+            console.log("UPDATE for editor", endpointId)
+            processInstructions()
         }
     }
 
     onMount(async () => {
         window.addEventListener("refresh", handleUpdate)
-        // await init()
         wasmModule = await import('../../../wasm/scraping-instructions/pkg')
-        // await fetchHtml()
         await loadInstructionSet()
     })
 
@@ -100,7 +121,17 @@
 
 {#if instructions}
     <div class="box">
+        <button
+            onclick={saveInstructionSet}
+        >
+            Save
+        </button>
         <p>url: {instructions.url}</p>
+        <input
+            type="text"
+            bind:value={instructions.url}
+            placeholder="your url"
+        />
         <p>json:</p>
         <div class="box">
             <SchemeView bind:scheme={instructions.scheme} endpointId={endpointId}/>
