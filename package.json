@@ -51,6 +51,7 @@
 	},
 	"dependencies": {
 		"@aws-amplify/auth": "^6.11.3",
+		"amplify-adapter": "^0.2.0",
 		"aws-amplify": "^6.13.3",
 		"tailwindcss-animate": "^1.0.7"
 	}
