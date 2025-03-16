@@ -6,6 +6,8 @@
     import { goto } from "$app/navigation"
     import { CircleAlert } from 'lucide-svelte'
 
+    import { Button } from "$lib/components/ui/button";
+
     // Shadcn/svelte
     import * as Card from '$lib/components/ui/card'
     import * as Accordion from '$lib/components/ui/accordion'
@@ -279,11 +281,11 @@
 
                                         <Editor endpointId={endpoint.id} />
 
-                                        <button
+                                        <Button
                                             onclick={scheduleScrape}
                                         >
                                             DEPLOY
-                                        </button>
+                                        </Button>
 
                                     </Card.Content>
                                 </Card.Root>

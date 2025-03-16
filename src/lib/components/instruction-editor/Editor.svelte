@@ -12,6 +12,9 @@
 	import { emptyScheme } from "$lib/interfaces";
 	// import { scrape_magic } from "../../../wasm/scraping-instructions/pkg/scraping_instructions_bg";
 
+    import { Button, buttonVariants } from "$lib/components/ui/button";
+    import { Input } from "$lib/components/ui/input";
+
     let { endpointId }: { endpointId: string } = $props()
 
     let wasmModule: any
@@ -117,34 +120,39 @@
 </script>
 
 {#if instructions}
-    <div class="box">
-        <button
+    <div>
+        <Button
             onclick={saveInstructionSet}
         >
             Save
-        </button>
-        <p>url: {instructions.url}</p>
-        <input
+        </Button>
+        <br>
+        <p>url:</p>
+        <Input
             type="text"
             bind:value={instructions.url}
             placeholder="your url"
         />
-        <p>json:</p>
+        <br>
+        <p>instructions:</p>
         <div class="box">
             <SchemeView bind:scheme={instructions.scheme} endpointId={endpointId}/>
         </div>
+        <br>
     </div>
     <div class="box">
         {#if html} 
             <WebpageEmbed pageContent={html} />
         {/if}
     </div>
+    <br>
 {:else}
     <p>loading...</p>
 {/if}
 
 <style>
     .box {
-        border: 2px solid blue;
+        border: 2px solid rgb(222, 222, 222);
+        border-radius: 4px;
     }
 </style>
