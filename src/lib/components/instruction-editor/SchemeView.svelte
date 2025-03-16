@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { SchemeType, type Instructions, type Scheme } from "$lib/interfaces";
-
+    import { SchemeType, type Scheme } from "./lib/interfaces";
     import ListSchemeView from "./ListSchemeView.svelte";
+    import ListView from "./ListSchemeView.svelte";
     import ObjectSchemeView from "./ObjectSchemeView.svelte";
     import StringSchemeView from "./StringSchemeView.svelte";
 

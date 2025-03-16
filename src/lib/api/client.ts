@@ -326,12 +326,12 @@ class AuthApiClient {
                 'app_private',
                 'get_endpoint_by_id',
                 [endpointId]
-            ),
+            ), 
 
         getByProjectId: (projectId: string) =>
             this.getArray<Endpoint>(
                 'app_private',
-                'get_project_endpoints',
+                'get_endpoints_by_project',
                 [projectId]
             ),
 
