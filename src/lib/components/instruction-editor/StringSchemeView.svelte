@@ -3,7 +3,7 @@
     import { selectedElement } from "./lib/selectedElemStore.svelte";
     import type { StringScheme } from "./lib/interfaces";
 
-    const { scheme = $bindable() }: { scheme: StringScheme } = $props()
+    let { scheme = $bindable(), endpointId }: { scheme: StringScheme, endpointId: string } = $props()
 
     function selectString() {
         // shows popup and the user selects something
@@ -12,7 +12,7 @@
         console.log('IN STRING SCHEME', path)
         scheme.path = path
 
-        window.dispatchEvent(new CustomEvent("refresh"));
+        window.dispatchEvent(new CustomEvent("refresh", { detail: { endpointId }}));
     }
 
 

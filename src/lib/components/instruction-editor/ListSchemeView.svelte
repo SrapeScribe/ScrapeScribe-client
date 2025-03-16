@@ -5,7 +5,7 @@
     import { getElementPath } from "./lib/pathinator";
     import { selectedElement } from "./lib/selectedElemStore.svelte";
 
-    let {scheme = $bindable()}: { scheme: ListScheme } = $props()
+    let { scheme = $bindable(), endpointId }: { scheme: ListScheme, endpointId: string } = $props()
 
 
     let isOpenEditor = $state(false)
@@ -14,7 +14,7 @@
         isOpenEditor = !isOpenEditor
 
         if (!isOpenEditor) {
-            window.dispatchEvent(new CustomEvent("refresh"))
+            window.dispatchEvent(new CustomEvent("refresh", { detail: { endpointId }}))
         }
     }
 
@@ -55,7 +55,7 @@
 
         {#if isOpenEditor}
             {#if scheme.element_scheme}
-                <SchemeView bind:scheme={scheme.element_scheme}/>
+                <SchemeView bind:scheme={scheme.element_scheme} endpointId={endpointId}/>
                 <button onclick={removeElementScheme}>Change Type</button>
             {:else}
                 <Dropdown onSelect={(value: SchemeType) => createElementScheme(value)} />

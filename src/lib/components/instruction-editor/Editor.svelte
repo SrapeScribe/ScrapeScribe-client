@@ -7,105 +7,42 @@
     import WebpageEmbed from "./WebpageEmbed.svelte";
     import { makeElementSchemePathsRelative } from "./lib/relativizer";
     import { interlaceInstructions } from "./lib/interlacer";
+	import { authApiClient } from "$lib/api/client";
+	import { cognitoUserPoolsTokenProvider } from "@aws-amplify/auth/cognito";
+	import { emptyScheme } from "$lib/interfaces";
 	// import { scrape_magic } from "../../../wasm/scraping-instructions/pkg/scraping_instructions_bg";
 
-    let wasmModule: any
+    let { endpointId }: { endpointId: string } = $props()
 
-    const listOfObjects: Scheme = {
-        type: SchemeType.Object,
-        fields: [
-            {
-                key: "title",
-                value: {
-                    type: SchemeType.String,
-                    path: "body > h1",
-                    mode: "INNER_HTML"
-                },
-            },
-            {
-                key: "things",
-                value: {
-                    type: SchemeType.List,
-                    path: "body > div:nth-of-type(1) > ul",
-                    element_scheme: {
-                        type: SchemeType.Object,
-                        fields: [
-                            {
-                                key: "activity",
-                                value: {
-                                    type: SchemeType.String,
-                                    path: "body > div:nth-of-type(1) > ul > li:nth-of-type(1) > div:nth-of-type(2) > p > span",
-                                    mode: "INNER_HTML"
-                                },
-                            },
-                            {
-                                key: "id",
-                                value: {
-                                    type: SchemeType.String,
-                                    path: "body > div:nth-of-type(1) > ul > li:nth-of-type(1) > p:nth-of-type(1)",
-                                    mode: "INNER_HTML"
-                                },
-                            }
-                        ]
-                    }
+    let wasmModule: any
+    let instructions = $state<Instructions | undefined>(undefined)
+    let html = $state<string | undefined>(undefined)
+
+        async function loadInstructionSet() {
+        try {
+            const instructionSet = await authApiClient.instructionSetApi.getByEndpointId(endpointId)
+            console.log("INSTRUCTION SET RECEIVED")
+            console.log(instructionSet)
+            if (instructionSet) {
+                instructions = {
+                    url: instructionSet.url,
+                    scheme: instructionSet.schema as Scheme
+                }
+                console.log("INSTRUCTIONS RECEIVED")
+                console.log(instructions)
+                await fetchHtml()
+                processInstructions()
+            } else {
+                instructions = {
+                    url: '',
+                    scheme: emptyScheme(SchemeType.Object)
                 }
             }
-        ]
-    };
+        } catch (err) {
+            console.error('Error loading instruction set:', err)
+        }
+    }
 
-    // const content = {"things":[{"activity":"golfing","id":"1"},{"activity":"fireworks","id":"2"},{"activity":"fireworks","id":"2"}],"title":"this is a test page for the scraper"}
-
-    // const interlaced = interlaceScheme(listOfObjects, content)
-
-    // console.log('interlaced')
-    // console.log(JSON.stringify(interlaced, null, 2))
-
-    // console.log(JSON.stringify(makeElementSchemePathsRelative(listOfObjects), null, 2))
-
-    let instructions = $state<Instructions>({
-        url: "https://rootofminus1atu.neocities.org",
-        scheme: listOfObjects
-        // scheme: {
-        //     type: SchemeType.Object,
-        //     fields: [
-        //         {
-        //             key: "title",
-        //             value: {
-        //                 type: SchemeType.String,
-        //                 path: "body > h1",
-        //                 mode: "INNER_HTML"
-        //             }
-        //         }
-        //     ]
-        // }
-        // scheme: {
-        //     type: SchemeType.Object,
-        //     fields: [
-        //         {
-        //             key: "title",
-        //             value: {
-        //                 type: SchemeType.String,
-        //                 path: "body > h1",
-        //                 mode: "INNER_HTML"
-        //             },
-        //         },
-        //         {
-        //             key: "activities",
-        //             value: {
-        //                 type: SchemeType.List,
-        //                 path: "body > div:nth-of-type(1) > ul",
-        //                 element_scheme: {
-        //                     type: SchemeType.String,
-        //                     path: "li > div:nth-of-type(2) > p > span",
-        //                     mode: "INNER_HTML"
-        //                 }
-        //             }
-        //         }
-        //     ]
-        // }
-    })
-
-    let html = $state<string | undefined>(undefined)
 
     async function fetchHtml() {
         console.log("FETCHING")
@@ -120,11 +57,11 @@
     }
 
     function processInstructions() {
-        console.log("PROCESSING")
-        console.log(JSON.stringify(instructions.scheme, null, 2))
-        
         if (!html || !instructions) return
 
+        console.log("PROCESSING")
+        // console.log(JSON.stringify(instructions.scheme, null, 2))
+        
         try {
             // NOTE: calling the relativizer below is not ideal as it's only really useful for when the user is creating instructions involving lists
             // in the future we should call this only when needed
@@ -140,16 +77,19 @@
     }
 
     function handleUpdate(event: Event) {
-        console.log("UPDATE")
-        processInstructions()
+        // omfg typescript I DONT CAREEEEEEEEEEEEEE
+        if (event.detail.endpointId === endpointId) {
+            console.log("UPDATE for editor", endpointId);
+            processInstructions();
+        }
     }
 
     onMount(async () => {
         window.addEventListener("refresh", handleUpdate)
         // await init()
         wasmModule = await import('../../../wasm/scraping-instructions/pkg')
-        await fetchHtml()
-        processInstructions()
+        // await fetchHtml()
+        await loadInstructionSet()
     })
 
     // window is undefined, thanks svelte, very cool
@@ -163,7 +103,7 @@
         <p>url: {instructions.url}</p>
         <p>json:</p>
         <div class="box">
-            <SchemeView bind:scheme={instructions.scheme} />
+            <SchemeView bind:scheme={instructions.scheme} endpointId={endpointId}/>
         </div>
     </div>
     <div class="box">

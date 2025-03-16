@@ -4,14 +4,14 @@
     import KeyNameView from "./KeyNameView.svelte";
     import SchemeView from "./SchemeView.svelte";
 
-    let {scheme = $bindable()}: { scheme: ObjectScheme } = $props()
+    let { scheme = $bindable(), endpointId }: { scheme: ObjectScheme, endpointId: string } = $props()
 
     function addField() {
         scheme = {
             ...scheme,
             fields: [...scheme.fields, {key: "", value: undefined}]
         }
-        window.dispatchEvent(new CustomEvent("refresh"))
+        window.dispatchEvent(new CustomEvent("refresh", { detail: { endpointId }}))
     }
 
     function removeField(index: number) {
@@ -61,7 +61,7 @@
         <KeyNameView keyName={kv.key} onSave={(newKeyName: string) => updateKeyName(index, newKeyName)}/>
         :
         {#if kv.value}
-            <SchemeView bind:scheme={kv.value}/>
+            <SchemeView bind:scheme={kv.value} endpointId={endpointId}/>
         {:else}
             <Dropdown onSelect={(value: SchemeType) => onSelect(value, index)}/>
         {/if}
