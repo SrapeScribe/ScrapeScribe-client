@@ -11,12 +11,12 @@
             <p>First, enter your first name and create the endpoint that you want your API to be called (for example, /movies).</p>
             <figure class="max-w-lg mx-auto">
                 <img class="h-auto max-w-full rounded-lg shadow-lg" src="/creatingEndpoint.png" alt="ScrapeScribe interface showing the 'Create' button">
-                <figcaption class="mt-2 text-sm text-center text-gray-500 dark:text-gray-400">Use the "Create" button to start.</figcaption>
+                <figcaption class="mt-2 text-sm text-center text-gray-500 dark:text-gray-400">Use the "Create" button to start</figcaption>
             </figure>
             <p>Then, open the document editor so you can modify the data fields in the API.</p>
             <figure class="max-w-lg mx-auto">
                 <img class="h-auto max-w-full rounded-lg shadow-lg" src="/docEditor.png" alt="ScrapeScribe document editor interface">
-                <figcaption class="mt-2 text-sm text-center text-gray-500 dark:text-gray-400">Document Editor with user-friendly UI.</figcaption>
+                <figcaption class="mt-2 text-sm text-center text-gray-500 dark:text-gray-400">Document Editor with user-friendly UI</figcaption>
             </figure>
             <p>You can use the UI provided for a more structured and user-friendly experience or the JSON editor for more flexibility.</p>
             <figure class="max-w-lg mx-auto">
@@ -43,7 +43,7 @@
                 <img class="h-auto max-w-full rounded-lg shadow-lg" src="/copyingAPI.png" alt="Copying the generated API URL in ScrapeScribe">
                 <figcaption class="mt-2 text-sm text-center text-gray-500 dark:text-gray-400">Copy the URL of your API</figcaption>
             </figure>
-            <p>Testing the API with Postman</p>
+            <p>Testing the API with Postman.</p>
             <figure class="max-w-lg mx-auto">
                 <img class="h-auto max-w-full rounded-lg shadow-lg" src="/testingAPI.png" alt="Testing the API in Postman with a request">
                 <figcaption class="mt-2 text-sm text-center text-gray-500 dark:text-gray-400">Use tools like Postman to test your own unique APIs</figcaption>
