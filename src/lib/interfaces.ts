@@ -1,30 +1,44 @@
 export type User = {
-	cognito_id: string
-	email: string
-	username: string
-	name: string | null
-	role: string
-	created_at: string
-	last_login: string | null
+	// Cognito required attributes
+	sub: string                  // Unique identifier (replacing cognito_id)
+	email: string                // User's email
+
+	// Standard Cognito attributes
+	name?: string                // Full name
+	family_name?: string         // Last name
+	given_name?: string          // First name
+	middle_name?: string         // Middle name
+	nickname?: string            // Nickname
+	preferred_username?: string  // Username (replacing username)
+	profile?: string             // Profile URL
+	picture?: string             // Profile picture URL
+	website?: string             // Website URL
+	gender?: string              // Gender
+	birthdate?: string           // Birth date
+	zoneinfo?: string            // Time zone
+	locale?: string              // Locale
+	updated_at?: string          // Last updated timestamp
+	address?: string             // Address
+	phone_number?: string        // Phone number
+
+	// Custom attributes
+	role?: string                // User role (admin, user, etc.)
+	created_at?: string          // Account creation date
+	last_login?: string          // Last login timestamp
 }
 
-export type UserProfile = {
-	user: User
-	projects: Project[]
+export type ProjectWithEndpointCount = Project & {
+	endpoint_count: number
 }
 
 export type Project = {
 	id: string
-	user_id?: string
+	user_id?: string            // User ID from Cognito (sub)
 	name: string
 	slug: string
 	status: string
 	created_at: string
 	updated_at: string
-}
-
-export type ProjectWithEndpointCount = Project & {
-	endpoint_count: number
 }
 
 export type Endpoint = {

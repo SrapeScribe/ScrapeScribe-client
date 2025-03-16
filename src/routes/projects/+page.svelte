@@ -1,45 +1,74 @@
 <script lang="ts">
-    import {onMount} from 'svelte'
-    import {goto} from '$app/navigation'
-    import {projectStore} from "$lib/states/project.svelte"
+    import { onMount } from 'svelte'
+    import { goto } from '$app/navigation'
+    import { projectStore } from "$lib/states/project.svelte"
+    import { endpointStore } from "$lib/states/endpoint.svelte.js"
+    import * as Alert from '$lib/components/ui/alert/index.js'
+    import { CircleAlert } from 'lucide-svelte'
 
     let newProjectName = $state('')
     let isCreating = $state(false)
+    let createError = $state<string | null>(null)
 
+    // Derived values from store
     let projectsData = $derived(projectStore.projects)
     let isLoading = $derived(projectStore.isLoading)
+    let storeError = $derived(projectStore.error)
 
     onMount(async () => {
-        await projectStore.loadProjects()
+        console.log('Projects page: Component mounted, loading projects')
+        await loadProjects()
     })
 
-    async function createProject() {
-        if (!newProjectName.trim()) return
+    async function loadProjects() {
+        console.log('Projects page: Fetching all projects')
+        try {
+            await projectStore.loadProjects()
+            console.log(`Projects page: Loaded ${projectsData.length} projects`)
+        } catch (error) {
+            console.error('Projects page: Failed to load projects', error)
+        }
+    }
 
+    async function createProject() {
+        if (!newProjectName.trim()) {
+            createError = 'Project name cannot be empty'
+            return
+        }
+
+        createError = null
         isCreating = true
+        console.log(`Projects page: Creating new project "${newProjectName}"`)
+
         try {
             await projectStore.addProject(newProjectName.trim())
+            console.log('Projects page: Project created successfully')
             newProjectName = ''
         } catch (err) {
-            console.error('Failed to create project:', err)
+            console.error('Projects page: Failed to create project:', err)
+            createError = err instanceof Error ? err.message : 'Failed to create project'
         } finally {
             isCreating = false
         }
     }
 
-    async function deleteProject(projectId: string) {
-        if (!confirm('Are you sure you want to delete this project?')) return
+    async function deleteProject(projectId: string, projectName: string) {
+        if (!confirm(`Are you sure you want to delete "${projectName}"? This action cannot be undone.`)) return
 
+        console.log(`Projects page: Deleting project ${projectId} (${projectName})`)
         try {
             await projectStore.removeProject(projectId)
+            console.log('Projects page: Project deleted successfully')
         } catch (err) {
-            console.error('Failed to delete project:', err)
+            console.error('Projects page: Failed to delete project:', err)
+            alert('Failed to delete project. Please try again.')
         }
     }
 
-    function openProject(slug: string) {
+    function navigateToProject(slug: string, projectName: string) {
+        console.log(`Projects page: Navigating to project ${slug} (${projectName})`)
         // Clear endpoints before navigation
-        endpointStore.endpoints = []
+        endpointStore.reset()
         goto(`/projects/${slug}`)
     }
 </script>
@@ -49,13 +78,14 @@
 </svelte:head>
 
 <div class="container mx-auto p-4">
-
     <h1 class="text-2xl font-bold mb-6">Your Projects</h1>
 
-    {#if projectStore.error}
-        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
-            <p>{projectStore.error}</p>
-        </div>
+    {#if storeError}
+        <Alert.Root variant="destructive" class="mb-4">
+            <CircleAlert class="size-4" />
+            <Alert.Title>Error</Alert.Title>
+            <Alert.Description>{storeError}</Alert.Description>
+        </Alert.Root>
     {/if}
 
     <!-- Create new project form -->
@@ -77,6 +107,9 @@
                 {isCreating ? 'Creating...' : 'Create Project'}
             </button>
         </form>
+        {#if createError}
+            <p class="text-red-500 mt-2">{createError}</p>
+        {/if}
     </div>
 
     {#if isLoading}
@@ -85,11 +118,11 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {#each projectsData as project (project.id)}
                 <div class="bg-white p-4 rounded shadow-md hover:shadow-lg transition">
-                    <div class=" mb-3">
+                    <div class="mb-3">
                         <div class="flex justify-between items-start">
                             <h3 class="text-lg font-semibold">{project.name}</h3>
                             <button
-                                    onclick={() => deleteProject(project.id)}
+                                    onclick={() => deleteProject(project.id, project.name)}
                                     class="text-red-500 hover:text-red-700"
                                     aria-label="Delete project"
                             >
@@ -102,10 +135,9 @@
                         <span class="text-gray-400 text-sm">Slug: {project.slug}</span>
                     </div>
 
-
                     <div class="mb-4">
                         <p class="text-sm text-gray-600">
-                            <span class="font-medium">Endpoints:</span> { project.endpoint_count }
+                            <span class="font-medium">Endpoints:</span> {project.endpoint_count}
                         </p>
                         <p class="text-sm text-gray-600">
                             <span class="font-medium">Status:</span>
@@ -116,7 +148,7 @@
                     </div>
 
                     <button
-                            onclick={() => openProject(project.slug)}
+                            onclick={() => navigateToProject(project.slug, project.name)}
                             class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded transition"
                     >
                         Open Project

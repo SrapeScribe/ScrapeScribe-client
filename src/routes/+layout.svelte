@@ -20,7 +20,7 @@
     let isInitializing = $state(true)
 
     // list of public routes TODO: move to a separate file and make global
-    const publicRoutes = ['/sign-in', '/sign-up', '/']
+    const publicRoutes = ['/sign-in', '/sign-up', '/auth', '/', '/demo', '/about']
 
     const isPublicRoute = $derived(() => {
         return publicRoutes.some(route =>

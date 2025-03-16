@@ -162,7 +162,9 @@ export class AuthStore {
             const attributes = await fetchUserAttributes()
             console.log("🔐 User attributes fetched", attributes)
 
+            // @ts-ignore
             this.authState.userAttributes = attributes
+            // @ts-ignore
             return attributes
         } catch (error) {
             console.error("🔐 Error fetching user attributes:", error)
