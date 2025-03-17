@@ -53,11 +53,21 @@
         if (!instructions) return
 
         try {
+            const relativizedScheme = makeElementSchemePathsRelative(instructions.scheme)
+
             if (!instructionSetId) {
-                const created = await authApiClient.instructionSetApi.create(endpointId, instructions.scheme, instructions.url)
+            const created = await authApiClient.instructionSetApi.create(
+                    endpointId, 
+                    relativizedScheme, 
+                    instructions.url
+                )
                 instructionSetId = created.id
             } else {
-                await authApiClient.instructionSetApi.update(instructionSetId, instructions.scheme, instructions.url)
+                await authApiClient.instructionSetApi.update(
+                    instructionSetId, 
+                    relativizedScheme, 
+                    instructions.url
+                )
             }
 
             
@@ -126,6 +136,7 @@
         >
             Save
         </Button>
+        <br>
         <br>
         <p>url:</p>
         <Input

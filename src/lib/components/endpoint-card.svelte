@@ -149,7 +149,7 @@
     }
 
 
-
+    let deployMessage = $state<string>("")
 
     async function scheduleScrape() {
         const endpointName = endpoint.path
@@ -167,7 +167,7 @@
         console.log("TOAST: instruction set ok")
 
         const res = await authApiClient.schedulingApi.schedule(projectName, endpointName, instructionSet.url, instructionSet.schema, 'rate(2 minutes)')
-        console.log("TOAST:", res)
+        deployMessage = res.message
     }
 </script>
 
@@ -286,6 +286,7 @@
                                         >
                                             DEPLOY
                                         </Button>
+                                        <p>{deployMessage}</p>
 
                                     </Card.Content>
                                 </Card.Root>
