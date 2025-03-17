@@ -42,21 +42,21 @@
 </script>
 
 {#if !scheme.path}
-    <button onclick={selectListElement}>select list</button>
+    <button onclick={selectListElement} class="text-sm px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">select list</button>
 {:else}
     {#if isOpenEditor}
-        <button onclick={selectListElement}>select list</button>
+        <button onclick={selectListElement} class="text-sm px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">select list</button>
     {/if}
     {"["}
     <div class="pl-1">
-        <button onclick={toggleEditor}>{isOpenEditor ? "save list" : "edit list"}</button>
+        <button onclick={toggleEditor} class="text-sm px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">{isOpenEditor ? "save list" : "edit list"}</button>
 
         <br/>
 
         {#if isOpenEditor}
             {#if scheme.element_scheme}
                 <SchemeView bind:scheme={scheme.element_scheme} endpointId={endpointId}/>
-                <button onclick={removeElementScheme}>Change Type</button>
+                <button onclick={removeElementScheme} class="text-sm px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">Change Type</button>
             {:else}
                 <Dropdown onSelect={(value: SchemeType) => createElementScheme(value)} />
             {/if}

@@ -28,7 +28,7 @@
 </script>
 
 {#if !scheme.path}
-    <button onclick={selectString}>select string</button>
+    <button onclick={selectString} class="text-sm px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">select string</button>
 {:else}
     <span>{content}</span>
 {/if}

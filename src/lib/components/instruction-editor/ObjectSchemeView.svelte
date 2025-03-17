@@ -55,6 +55,7 @@
     }
 </script>
 
+
 {"{"}
 <div class="pl-1">
     {#each scheme.fields as kv, index}
@@ -65,15 +66,15 @@
         {:else}
             <Dropdown onSelect={(value: SchemeType) => onSelect(value, index)}/>
         {/if}
-        <button onclick="{() => removeField(index)}">X</button>
+        <button onclick="{() => removeField(index)}" class="text-sm px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">X</button>
         {#if kv.value}
-            <button onclick="{() => changeType(index)}">Change Type</button>
+            <button onclick="{() => changeType(index)}" class="text-sm px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">Change Type</button>
         {/if}
         <br>
     {/each}
 </div>
 <div class="pl-1">
-    <button onclick="{addField}">add field</button>
+    <button onclick="{addField}" class="text-sm px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">add field</button>
 </div>
 {"}"}
 
