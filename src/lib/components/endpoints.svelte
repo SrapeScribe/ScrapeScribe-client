@@ -125,6 +125,7 @@
                                     name="method"
                                     bind:value={newEndpoint.method}
                                     class="w-full p-2 border rounded bg-white"
+                                    disabled
                             >
                                 <option value="GET">GET</option>
                                 <option value="POST">POST</option>
@@ -137,13 +138,19 @@
                             <label for="path" class="block text-sm font-medium text-gray-700 mb-1">
                                 Path
                             </label>
-                            <input
-                                    name="path"
-                                    type="text"
-                                    bind:value={newEndpoint.path}
-                                    class="w-full p-2 border rounded"
-                                    placeholder="/api/resource"
-                            />
+                            <div class="flex items-center gap-0.5">
+                                {#if projectData !== null}
+                                    <span>{projectData.slug}.scrapescribe.cloud/</span>
+                                {/if}
+                                <input
+                                        name="path"
+                                        type="text"
+                                        bind:value={newEndpoint.path}
+                                        class="w-full p-2 border rounded"
+                                        placeholder="resource-name"
+                                />
+                            </div>
+
                         </div>
                         <div class="md:col-span-2">
                             <label for="description" class="block text-sm font-medium text-gray-700 mb-1">

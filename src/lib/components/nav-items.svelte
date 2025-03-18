@@ -35,35 +35,35 @@
 						</a>
 					{/snippet}
 				</Sidebar.MenuButton>
-				<DropdownMenu.Root>
-					<DropdownMenu.Trigger>
-						{#snippet child({ props })}
-							<Sidebar.MenuAction showOnHover {...props}>
-								<Ellipsis />
-								<span class="sr-only">More</span>
-							</Sidebar.MenuAction>
-						{/snippet}
-					</DropdownMenu.Trigger>
-					<DropdownMenu.Content
-						class="w-48 rounded-lg"
-						side={sidebar.isMobile ? "bottom" : "right"}
-						align={sidebar.isMobile ? "end" : "start"}
-					>
-						<DropdownMenu.Item>
-							<Folder class="text-muted-foreground" />
-							<span>View Project</span>
-						</DropdownMenu.Item>
-						<DropdownMenu.Item>
-							<Forward class="text-muted-foreground" />
-							<span>Share Project</span>
-						</DropdownMenu.Item>
-						<DropdownMenu.Separator />
-						<DropdownMenu.Item>
-							<Trash2 class="text-muted-foreground" />
-							<span>Delete Project</span>
-						</DropdownMenu.Item>
-					</DropdownMenu.Content>
-				</DropdownMenu.Root>
+<!--				<DropdownMenu.Root>-->
+<!--					<DropdownMenu.Trigger>-->
+<!--						{#snippet child({ props })}-->
+<!--							<Sidebar.MenuAction showOnHover {...props}>-->
+<!--								<Ellipsis />-->
+<!--								<span class="sr-only">More</span>-->
+<!--							</Sidebar.MenuAction>-->
+<!--						{/snippet}-->
+<!--					</DropdownMenu.Trigger>-->
+<!--					<DropdownMenu.Content-->
+<!--						class="w-48 rounded-lg"-->
+<!--						side={sidebar.isMobile ? "bottom" : "right"}-->
+<!--						align={sidebar.isMobile ? "end" : "start"}-->
+<!--					>-->
+<!--						<DropdownMenu.Item>-->
+<!--							<Folder class="text-muted-foreground" />-->
+<!--							<span>View Project</span>-->
+<!--						</DropdownMenu.Item>-->
+<!--						<DropdownMenu.Item>-->
+<!--							<Forward class="text-muted-foreground" />-->
+<!--							<span>Share Project</span>-->
+<!--						</DropdownMenu.Item>-->
+<!--						<DropdownMenu.Separator />-->
+<!--						<DropdownMenu.Item>-->
+<!--							<Trash2 class="text-muted-foreground" />-->
+<!--							<span>Delete Project</span>-->
+<!--						</DropdownMenu.Item>-->
+<!--					</DropdownMenu.Content>-->
+<!--				</DropdownMenu.Root>-->
 			</Sidebar.MenuItem>
 		{/each}
 	</Sidebar.Menu>

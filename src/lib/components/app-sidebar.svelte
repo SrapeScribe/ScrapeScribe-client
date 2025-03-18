@@ -8,26 +8,26 @@
 
     const data = {
         items: [
-            {
-                name: 'Dashboard',
-                url: '/dashboard',
-                icon: LayoutDashboard
-            },
+            // {
+            //     name: 'Dashboard',
+            //     url: '/dashboard',
+            //     icon: LayoutDashboard
+            // },
             {
                 name: 'Projects',
                 url: '/projects',
                 icon: FolderClosed
             },
-            {
-                name: 'Endpoints',
-                url: '/endpoints',
-                icon: NotebookText
-            },
-            {
-                name: 'Instructions',
-                url: '/instructions',
-                icon: FileJson
-            }
+            // {
+            //     name: 'Endpoints',
+            //     url: '/endpoints',
+            //     icon: NotebookText
+            // },
+            // {
+            //     name: 'Instructions',
+            //     url: '/instructions',
+            //     icon: FileJson
+            // }
         ]
     }
 
