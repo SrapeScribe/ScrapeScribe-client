@@ -1,14 +1,21 @@
 <script lang="ts">
-    import * as Accordion from '$lib/components/ui/accordion'
-    import * as Alert from '$lib/components/ui/alert/index.js'
     import { slide } from 'svelte/transition'
-    import { METHOD_STYLES } from '$lib/constants'
     import type { Endpoint, Project } from "$lib/interfaces"
     import { setContext } from "svelte"
     import { endpointStore } from "$lib/states/endpoint.svelte.js"
     import { goto } from "$app/navigation"
     import { CircleAlert } from 'lucide-svelte'
-    // import Editor from "$lib/components/instruction-editor/Editor.svelte"
+
+    import { Button } from "$lib/components/ui/button";
+
+    // Shadcn/svelte
+    import * as Card from '$lib/components/ui/card'
+    import * as Accordion from '$lib/components/ui/accordion'
+    import * as Alert from '$lib/components/ui/alert/index.js'
+
+    import {getMethodStyle} from "$lib/utils"
+	import Editor from './instruction-editor/Editor.svelte';
+	import { authApiClient } from '$lib/api/client';
 
     let props = $props<{
         currentProject: Project,
@@ -140,16 +147,42 @@
         console.log(`Endpoint card: Navigating to details for endpoint ${endpoint.id} in project ${currentProject.slug}`)
         goto(`/projects/${currentProject.slug}/${endpoint.path}`)
     }
+
+
+    let deployMessage = $state<string>("")
+
+    async function scheduleScrape() {
+        const endpointName = endpoint.path
+        // could be passed in, isntead of fetched
+        const project = await authApiClient.projectApi.getById(endpoint.project_id)
+        const projectName = project.name
+        console.log("TOAST: project ok")
+
+        // could be passed in as well, rather than fetched
+        const instructionSet = await authApiClient.instructionSetApi.getByEndpointId(endpoint.id)
+
+        if (!instructionSet) {
+            throw new Error('No instruction set found for this endpoint');
+        }
+        console.log("TOAST: instruction set ok")
+
+        const res = await authApiClient.schedulingApi.schedule(projectName, endpointName, instructionSet.url, instructionSet.schema, 'rate(2 minutes)')
+        deployMessage = res.message
+    }
 </script>
 
 <div class={`endpoint-container flex gap-2 rounded-lg ${className}`}>
     {#if isEditingPath}
         <div class="path-editor flex flex-col gap-2 w-full ">
             <div class="flex items-center gap-2 bg-slate-100 rounded-lg p-3 h-14">
-                <span class={`method-badge px-2 py-1 rounded text-sm font-mono ${METHOD_STYLES[endpoint.method]}`}>
+                <span class={`method-badge px-2 py-1 rounded text-sm font-mono ${getMethodStyle(endpoint.method)}`}>
                     {endpoint.method}
                 </span>
-
+                <span class="max-w-[300px] text-gray-700 truncate">
+                            <!--Mock Path-->
+                    {currentProject.slug}.scrapescribe.oi/
+                        </span>
+                <!--Mock Path-->
                 <input
                         type="text"
                         class="py-1 pl-2 rounded-sm bg-white outline-none flex-grow"
@@ -188,11 +221,12 @@
                         class="w-full rounded-lg bg-slate-100 hover:bg-slate-200 p-3 h-14 transition-colors hover:no-underline"
                 >
                     <div class="flex items-center gap-2">
-                        <span class={`px-2 py-1 rounded text-sm font-mono ${METHOD_STYLES[endpoint.method]}`}>
+                        <span class={`px-2 py-1 rounded text-sm font-mono ${getMethodStyle(endpoint.method)}`}>
                             {endpoint.method}
                         </span>
-                        <span class="max-w-[200px] text-md text-gray-700 truncate">
-                            {endpoint.path}
+                        <span class="max-w-[300px] text-md text-gray-700 truncate">
+                            <!--Mock Path-->
+                            {currentProject.slug}.scrapescribe.oi/{endpoint.path}
                         </span>
                         <span class={endpoint.is_active ? 'text-green-600 ml-auto' : 'text-gray-400 ml-auto'}>
                             {isTogglingStatus ? '⏳' : endpoint.is_active ? '✓' : '○'}
@@ -204,6 +238,11 @@
                     {#snippet child({props: contentProps, open, close})}
                         {#if open}
                             <div {...contentProps} transition:slide={{ duration: 200 }}>
+
+                                <!--Card for all content inside the accordion-->
+                                <Card.Root class="w-full">
+
+                                    <Card.Header>
                                 <div class="flex justify-between items-center mb-4">
                                     <h4 class="text-lg font-medium">{endpoint.description || 'No description'}</h4>
                                     <div class="flex gap-2">
@@ -231,11 +270,27 @@
                                         <Alert.Description>{statusError}</Alert.Description>
                                     </Alert.Root>
                                 {/if}
-                                <!-- Placeholder for instruction editor -->
-                                <p class="text-gray-500">This is where the endpoint configuration editor would go.</p>
-                                <div class="bg-white p-6 border rounded-lg mt-4">
-                                    <p class="text-center text-gray-400">Endpoint configuration editor would be implemented here</p>
-                                </div>
+                                    </Card.Header>
+
+                                    <Card.Content>
+                                        <!-- Placeholder for instruction editor -->
+                                        <!-- <p class="text-gray-500">This is where the endpoint configuration editor would go.</p>
+                                        <div class="bg-white p-6 border rounded-lg mt-4">
+                                            <p class="text-center text-gray-400">Endpoint configuration editor would be implemented here</p>
+                                        </div> -->
+
+                                        <Editor endpointId={endpoint.id} />
+
+                                        <Button
+                                            onclick={scheduleScrape}
+                                        >
+                                            DEPLOY
+                                        </Button>
+                                        <p>{deployMessage}</p>
+
+                                    </Card.Content>
+                                </Card.Root>
+
                             </div>
                         {/if}
                     {/snippet}

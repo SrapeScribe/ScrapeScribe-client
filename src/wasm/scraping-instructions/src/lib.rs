@@ -1,10 +1,8 @@
-mod utils;
-
 use wasm_bindgen::prelude::*;
-use serde::{Serialize, Deserialize};
-use scraper::{Html, Selector, ElementRef};
-use scraper::error::SelectorErrorKind;
+
+use scraper::{error::SelectorErrorKind, ElementRef, Html, Selector};
 use serde_json::{Value, Map};
+use serde::{Deserialize, Serialize};
 
 #[wasm_bindgen]
 extern "C" {
@@ -16,6 +14,10 @@ pub fn greet(name: &str) -> String {
     format!("Hello from Rust, {}!", name)
 }
 
+#[wasm_bindgen]
+pub fn add(a: i32, b: i32) -> i32 {
+    a + b
+}
 
 #[wasm_bindgen]
 pub fn scrape_magic(content: &str, instructions: &str) -> String {

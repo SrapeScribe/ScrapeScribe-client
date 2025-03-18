@@ -1,3 +1,5 @@
+import {type HTTPMethod, METHOD_STYLES} from "$lib/constants"
+
 /**
  * Capitalize the first letter of a string
  * @param str
@@ -20,6 +22,14 @@ export function generateSlug(text: string): string {
 		.replace(/-+/g, "-")            // Replace multiple hyphens with single hyphen
 		.replace(/^-|-$/g, "");         // Remove leading and trailing hyphens
 }
+
+/**
+ * Get the style for an HTTP method badge
+ * @param method HTTP method
+ * @returns Style for the badge
+ */
+export const getMethodStyle = (method: string) =>
+	METHOD_STYLES[method as HTTPMethod] || "bg-gray-300 text-black";
 
 /**
  * Clean JSON string by removing trailing commas

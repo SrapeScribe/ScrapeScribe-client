@@ -1,46 +1,169 @@
 <script lang="ts">
-    import {SchemeType, type Instructions, type Scheme, type Endpoint} from "../../../interfaces"
+    import { SchemeType, type Instructions, type Scheme } from "./lib/interfaces";
     import SchemeView from "./SchemeView.svelte";
-    import {getContext, setContext} from "svelte"
+    // import init, { scrape_magic } from "$lib/pkg/my_package";
+    
+    import { onMount } from "svelte";
+    import WebpageEmbed from "./WebpageEmbed.svelte";
+    import { makeElementSchemePathsRelative } from "./lib/relativizer";
+    import { interlaceInstructions } from "./lib/interlacer";
+	import { authApiClient } from "$lib/api/client";
+	import { cognitoUserPoolsTokenProvider } from "@aws-amplify/auth/cognito";
+	import { emptyScheme } from "$lib/interfaces";
+	// import { scrape_magic } from "../../../wasm/scraping-instructions/pkg/scraping_instructions_bg";
 
-    const endpoint = getContext<Endpoint>('endpoint');
+    import { Button, buttonVariants } from "$lib/components/ui/button";
+    import { Input } from "$lib/components/ui/input";
 
-    setContext('instructions', endpoint.instructions);
+    let { endpointId }: { endpointId: string } = $props()
 
+    let wasmModule: any
+    let instructions = $state<Instructions | undefined>(undefined)
+    let html = $state<string | undefined>(undefined)
+    let instructionSetId = $state<string | undefined>(undefined)
+
+    async function loadInstructionSet() {
+        try {
+            const instructionSet = await authApiClient.instructionSetApi.getByEndpointId(endpointId)
+            console.log("INSTRUCTION SET RECEIVED")
+            console.log(instructionSet)
+            if (instructionSet) {
+                instructions = {
+                    url: instructionSet.url,
+                    scheme: instructionSet.schema as Scheme
+                }
+                console.log("instruction set ID", instructionSet.id)
+                instructionSetId = instructionSet.id
+                console.log("INSTRUCTIONS RECEIVED")
+                console.log(instructions)
+                await fetchHtml()
+                processInstructions()
+            } else {
+                instructions = {
+                    url: '',
+                    scheme: emptyScheme(SchemeType.Object)
+                }
+            }
+        } catch (err) {
+            console.error('error loading instruction set:', err)
+        }
+    }
+
+    async function saveInstructionSet() {
+        if (!instructions) return
+
+        try {
+            const relativizedScheme = makeElementSchemePathsRelative(instructions.scheme)
+
+            if (!instructionSetId) {
+            const created = await authApiClient.instructionSetApi.create(
+                    endpointId, 
+                    relativizedScheme, 
+                    instructions.url
+                )
+                instructionSetId = created.id
+            } else {
+                await authApiClient.instructionSetApi.update(
+                    instructionSetId, 
+                    relativizedScheme, 
+                    instructions.url
+                )
+            }
+
+            
+        } catch (err) {
+            console.error('error saving instruction set:', err)
+        }
+    }
+
+
+    async function fetchHtml() {
+        console.log("FETCHING")
+        if (!instructions) return
+        try {
+            const response = await fetch(`https://su577lt3di.execute-api.eu-west-1.amazonaws.com/v1/api/urlprocess?url=${instructions.url}`)
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+            html = await response.text()
+        } catch (error) {
+            console.error('error fetching:', error)
+        }
+    }
+
+    function processInstructions() {
+        if (!html || !instructions) return
+
+        console.log("PROCESSING")
+        // console.log(JSON.stringify(instructions.scheme, null, 2))
+        
+        try {
+            // NOTE: calling the relativizer below is not ideal as it's only really useful for when the user is creating instructions involving lists
+            // in the future we should call this only when needed
+            const relativized = makeElementSchemePathsRelative(instructions.scheme)
+            const outputJson = wasmModule.scrape_magic(html, JSON.stringify(relativized))
+            const output = JSON.parse(outputJson)
+
+            // NOTE: instead of bothering with interlacing instructions and the output, the wasm could take care of it itself, which could be less error prone and faster
+            instructions = interlaceInstructions(instructions, output)
+        } catch (error) {
+            console.error('error processing:', error)
+        }
+    }
+
+    function handleUpdate(event: Event) {
+        // omfg typescript I DONT CAREEEEEEEEEEEEEE
+        if (event.detail.endpointId === endpointId) {
+            console.log("UPDATE for editor", endpointId)
+            processInstructions()
+        }
+    }
+
+    onMount(async () => {
+        window.addEventListener("refresh", handleUpdate)
+        wasmModule = await import('../../../wasm/scraping-instructions/pkg')
+        await loadInstructionSet()
+    })
+
+    // window is undefined, thanks svelte, very cool
+    // onDestroy(async () => {
+    //     window.removeEventListener("refresh", handleUpdate)
+    // })
 </script>
 
-<div class="box">
-    <div class="flex gap-2 items-center mb-4">
-        <label for="name" class="font-medium">Label(optional):</label>
-        <input
-                id="name"
-                type="text"
-                bind:value={endpoint.name}
-                class="flex-grow p-2 border rounded"
+{#if instructions}
+    <div>
+        <Button
+            onclick={saveInstructionSet}
+        >
+            Save
+        </Button>
+        <br>
+        <br>
+        <p>url:</p>
+        <Input
+            type="text"
+            bind:value={instructions.url}
+            placeholder="your url"
         />
+        <br>
+        <p>instructions:</p>
+        <div class="box">
+            <SchemeView bind:scheme={instructions.scheme} endpointId={endpointId}/>
+        </div>
+        <br>
     </div>
-    <div class="flex gap-2 items-center mb-4">
-        <label for="url" class="font-medium">Website to scrape URL:</label>
-        <input
-                id="url"
-                type="text"
-                bind:value={endpoint.instructions.url}
-                class="flex-grow p-2 border rounded"
-        />
-    </div>
-
-    <p class="font-medium mb-2">Schema:</p>
     <div class="box">
-        <SchemeView
-                bind:scheme={endpoint.instructions.scheme}
-        />
+        {#if html} 
+            <WebpageEmbed pageContent={html} />
+        {/if}
     </div>
-</div>
+    <br>
+{:else}
+    <p>loading...</p>
+{/if}
 
 <style>
     .box {
-        border: 2px solid blue;
-        padding: 1rem;
-        border-radius: 0.5rem;
+        border: 2px solid rgb(222, 222, 222);
+        border-radius: 4px;
     }
 </style>

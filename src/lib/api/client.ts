@@ -326,12 +326,12 @@ class AuthApiClient {
                 'app_private',
                 'get_endpoint_by_id',
                 [endpointId]
-            ),
+            ), 
 
         getByProjectId: (projectId: string) =>
             this.getArray<Endpoint>(
                 'app_private',
-                'get_project_endpoints',
+                'get_endpoints_by_project',
                 [projectId]
             ),
 
@@ -409,7 +409,7 @@ class AuthApiClient {
             ),
 
         getByEndpointId: (endpointId: string) =>
-            this.getArray<InstructionSet>(
+            this.get<InstructionSet>(
                 'app_private',
                 'get_instruction_sets_by_endpoint',
                 [endpointId]
@@ -449,6 +449,32 @@ class AuthApiClient {
                 'move_instruction_set',
                 [instructionSetId, targetEndpointId]
             )
+    }
+
+    // TODO: change how projectName and endpointName are retrieved in the endpoint-card (or here)
+    // this is prob not ideal considering the other methods above but it should do for now
+    schedulingApi = {
+        schedule: async (projectName: string, endpointName: string, url: string, scheme: Record<string, any>, refreshPeriod: string) => {
+            const headers = await this.getAuthHeaders();
+            
+            const response = await this.fetch('https://su577lt3di.execute-api.eu-west-1.amazonaws.com/v1/api/schedule', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    project_name: projectName,
+                    endpoint_name: endpointName,
+                    url: url,
+                    scheme: scheme,
+                    refresh_period: refreshPeriod
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to schedule scrape: ${response.statusText}`);
+            }
+
+            return response.json();
+        }
     }
 }
 
