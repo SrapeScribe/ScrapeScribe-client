@@ -8,9 +8,9 @@
 	import Trash2 from "lucide-svelte/icons/trash-2";
 
 	let {
-		projects,
+		items,
 	}: {
-		projects: {
+		items: {
 			name: string;
 			url: string;
 			// This should be `Component` after lucide-svelte updates types
@@ -23,9 +23,9 @@
 </script>
 
 <Sidebar.Group class="group-data-[collapsible=icon]:hidden">
-	<Sidebar.GroupLabel>Projects</Sidebar.GroupLabel>
+	<Sidebar.GroupLabel>ScrapeScribe</Sidebar.GroupLabel>
 	<Sidebar.Menu>
-		{#each projects as item (item.name)}
+		{#each items as item (item.name)}
 			<Sidebar.MenuItem>
 				<Sidebar.MenuButton>
 					{#snippet child({ props })}
@@ -66,11 +66,5 @@
 				</DropdownMenu.Root>
 			</Sidebar.MenuItem>
 		{/each}
-		<Sidebar.MenuItem>
-			<Sidebar.MenuButton class="text-sidebar-foreground/70">
-				<Ellipsis class="text-sidebar-foreground/70" />
-				<span>More</span>
-			</Sidebar.MenuButton>
-		</Sidebar.MenuItem>
 	</Sidebar.Menu>
 </Sidebar.Group>
