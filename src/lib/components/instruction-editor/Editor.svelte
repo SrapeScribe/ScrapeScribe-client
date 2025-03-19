@@ -6,7 +6,7 @@
     import { onMount } from "svelte";
     import WebpageEmbed from "./WebpageEmbed.svelte";
     import { makeElementSchemePathsRelative } from "./lib/relativizer";
-    import { interlaceInstructions } from "./lib/interlacer";
+    import { interlaceInstructions, interlaceScheme } from "./lib/interlacer";
 	import { authApiClient } from "$lib/api/client";
 	import { cognitoUserPoolsTokenProvider } from "@aws-amplify/auth/cognito";
 	import { emptyScheme } from "$lib/interfaces";
@@ -100,15 +100,16 @@
             // in the future we should call this only when needed
             const relativized = makeElementSchemePathsRelative(instructions.scheme)
             console.log("RELATIVIZED", JSON.stringify(relativized, null, 2))
+            console.log("HTML", html)
             const outputJson = wasmModule.scrape_magic(html, JSON.stringify(relativized))
             console.log("OUTPUT JSON", JSON.stringify(outputJson, null, 2))
             const output = JSON.parse(outputJson)
 
-            const interlaced = interlaceInstructions(instructions, output)
+            const interlaced = interlaceScheme(relativized, output)
             console.log("INTERLACED", JSON.stringify(interlaced, null, 2))
 
             // NOTE: instead of bothering with interlacing instructions and the output, the wasm could take care of it itself, which could be less error prone and faster
-            instructions = interlaced
+            instructions.scheme = interlaced
         } catch (error) {
             console.error('error processing:', error)
         }

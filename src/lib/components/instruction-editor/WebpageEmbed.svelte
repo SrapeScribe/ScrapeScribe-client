@@ -1,14 +1,11 @@
 <script lang="ts">
-    import { onMount, onDestroy, createEventDispatcher } from 'svelte';
-    import { getElementPath } from './lib/pathinator';
-    import { selectedElement } from './lib/selectedElemStore.svelte';
+    import { onMount, onDestroy } from 'svelte';
+    import { selectionMode, endSelection } from './lib/selectionMode.svelte';
 
-    export let pageContent: string;
+    // export let pageContent: string;
+    let { pageContent } = $props<{ pageContent: string }>()
     
-    const dispatch = createEventDispatcher();
     let iframe: HTMLIFrameElement;
-    let currentSelectedElement: HTMLElement | null = null;
-    // let selectedElements: Set<HTMLElement> = new Set();
     let hoveredElement: HTMLElement | null = null;
     let iframeDoc: Document | null = null;
 
@@ -20,15 +17,12 @@
                 iframeDoc.write(pageContent);
                 iframeDoc.close();
                 
-                // Add selection styles directly in the iframe
                 const style = iframeDoc.createElement('style');
                 style.textContent = `
-                    .web-scraper-selected { outline: red dashed 2px !important; }
                     .web-scraper-hovered { outline: blue solid 2px !important; }
                 `;
                 iframeDoc.head.appendChild(style);
 
-                // Add event listeners
                 iframeDoc.addEventListener('mouseover', handleMouseOver, true);
                 iframeDoc.addEventListener('mouseout', handleMouseOut, true);
                 iframeDoc.addEventListener('click', handleClick, true);
@@ -48,14 +42,11 @@
         if (!iframeDoc) return;
         const target = event.target as HTMLElement;
         if (target && target.tagName !== 'HTML' && target.tagName !== 'BODY') {
-            if (hoveredElement && hoveredElement !== currentSelectedElement) {
+            if (hoveredElement) {
                 removeHighlight(hoveredElement);
             }
-            if (target !== currentSelectedElement) {
-                highlightElement(target);
-            }
+            highlightElement(target);
             hoveredElement = target;
-            dispatch('elementHover', { element: target });
         }
         event.stopPropagation();
     }
@@ -63,7 +54,7 @@
     function handleMouseOut(event: MouseEvent) {
         if (!iframeDoc) return;
         const target = event.target as HTMLElement;
-        if (target === hoveredElement && target !== currentSelectedElement) {
+        if (target === hoveredElement) {
             removeHighlight(target);
         }
         event.stopPropagation();
@@ -73,23 +64,13 @@
         if (!iframeDoc) return;
         event.preventDefault();
         event.stopPropagation();
+        
         const target = event.target as HTMLElement;
-
         if (target && target.tagName !== 'HTML' && target.tagName !== 'BODY') {
-            if (target === currentSelectedElement) {
-                // Deselect if clicking the currently selected element
-                deselectElement(target);
-                currentSelectedElement = null;
-            } else {
-                // Deselect previous element if exists
-                if (currentSelectedElement) {
-                    deselectElement(currentSelectedElement);
-                }
-                // Select new element
-                selectElement(target);
-                currentSelectedElement = target;
+            if (selectionMode.isActive && selectionMode.callback) {
+                selectionMode.callback(target);
+                endSelection();
             }
-            dispatch('selectionChange', { selectedElement: currentSelectedElement });
         }
     }
 
@@ -101,20 +82,21 @@
         element.classList.remove('web-scraper-hovered');
     }
 
-    function selectElement(element: HTMLElement) {
-        element.classList.add('web-scraper-selected');
-        console.log(getElementPath(element));
-        selectedElement.elem = element;
-    }
-
-    function deselectElement(element: HTMLElement) {
-        element.classList.remove('web-scraper-selected');
-        selectedElement.elem = null;
-    }
+    // Update cursor style based on selection mode
+    $effect(() => {
+        if (iframe?.contentDocument?.body) {
+            iframe.contentDocument.body.style.cursor = selectionMode.isActive ? 'crosshair' : 'default';
+        }
+    })
 </script>
 
 <div class="iframe-container">
     <iframe title="Selectable Iframe" bind:this={iframe} sandbox="allow-same-origin allow-scripts"></iframe>
+    {#if selectionMode.isActive}
+        <div class="selection-overlay">
+            {selectionMode.message}
+        </div>
+    {/if}
 </div>
 
 <style>

@@ -4,6 +4,7 @@
     import Dropdown from "./Dropdown.svelte";
     import { getElementPath } from "./lib/pathinator";
     import { selectedElement } from "./lib/selectedElemStore.svelte";
+	import { selectionMode, startSelection } from "./lib/selectionMode.svelte";
 
     let { scheme = $bindable(), endpointId }: { scheme: ListScheme, endpointId: string } = $props()
 
@@ -32,17 +33,39 @@
         }
     }
 
+    // function selectListElement() {
+    //     // shows popup and the user selects the list
+    //     scheme = {
+    //         ...scheme,
+    //         path: getElementPath(selectedElement.elem!)
+    //     }
+    // }
+
     function selectListElement() {
-        // shows popup and the user selects the list
-        scheme = {
-            ...scheme,
-            path: getElementPath(selectedElement.elem!)
-        }
+        startSelection('LIST', (element: HTMLElement) => {
+            scheme = {
+                ...scheme,
+                path: getElementPath(element)
+            }
+        })
     }
+
+    let buttonText = $derived(
+        selectionMode.isActive 
+            ? "click an element in the webpage below" 
+            : "select list"
+    )
+
 </script>
 
 {#if !scheme.path}
-    <button onclick={selectListElement} class="text-sm px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">select list</button>
+    <button 
+        onclick={selectListElement} 
+        class="text-sm px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+        disabled={selectionMode.isActive}
+    >
+        {buttonText}
+    </button>
 {:else}
     {#if isOpenEditor}
         <button onclick={selectListElement} class="text-sm px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">select list</button>
