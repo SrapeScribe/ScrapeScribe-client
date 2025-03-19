@@ -99,11 +99,16 @@
             // NOTE: calling the relativizer below is not ideal as it's only really useful for when the user is creating instructions involving lists
             // in the future we should call this only when needed
             const relativized = makeElementSchemePathsRelative(instructions.scheme)
+            console.log("RELATIVIZED", JSON.stringify(relativized, null, 2))
             const outputJson = wasmModule.scrape_magic(html, JSON.stringify(relativized))
+            console.log("OUTPUT JSON", JSON.stringify(outputJson, null, 2))
             const output = JSON.parse(outputJson)
 
+            const interlaced = interlaceInstructions(instructions, output)
+            console.log("INTERLACED", JSON.stringify(interlaced, null, 2))
+
             // NOTE: instead of bothering with interlacing instructions and the output, the wasm could take care of it itself, which could be less error prone and faster
-            instructions = interlaceInstructions(instructions, output)
+            instructions = interlaced
         } catch (error) {
             console.error('error processing:', error)
         }
