@@ -16,6 +16,7 @@
     import {getMethodStyle} from "$lib/utils"
 	import Editor from './instruction-editor/Editor.svelte';
 	import { authApiClient } from '$lib/api/client';
+    import SelectModal from "$lib/components/instruction-editor/SelectModal.svelte"
 
     let props = $props<{
         currentProject: Project,
@@ -273,11 +274,7 @@
                                     </Card.Header>
 
                                     <Card.Content>
-                                        <!-- Placeholder for instruction editor -->
-                                        <!-- <p class="text-gray-500">This is where the endpoint configuration editor would go.</p>
-                                        <div class="bg-white p-6 border rounded-lg mt-4">
-                                            <p class="text-center text-gray-400">Endpoint configuration editor would be implemented here</p>
-                                        </div> -->
+                                        <SelectModal />
 
                                         <Editor endpointId={endpoint.id} />
 
