@@ -4,7 +4,7 @@
     import {setContext} from "svelte"
     import {endpointStore} from "$lib/states/endpoint.svelte.js"
     import {goto} from "$app/navigation"
-    import {CircleAlert} from 'lucide-svelte'
+    import {CircleAlert, Copy} from 'lucide-svelte'
     import {getMethodStyle, validatePath} from "$lib/utils"
     import Editor from './instruction-editor/Editor.svelte'
     import {authApiClient} from '$lib/api/client'
@@ -14,7 +14,13 @@
     import * as Card from '$lib/components/ui/card'
     import * as Accordion from '$lib/components/ui/accordion'
     import * as Alert from '$lib/components/ui/alert/index.js'
+
     import {toast} from "svelte-sonner"
+    import {Input} from '$lib/components/ui/input'
+    import { Label } from '$lib/components/ui/label';
+
+
+    import {PUBLIC_API_GATEWAY_URL} from "$env/static/public"
 
     let props = $props<{
         currentProject: Project,
@@ -36,6 +42,9 @@
     let isDeleting = $state(false)
     let isTogglingStatus = $state(false)
     let statusError = $state<string | null>(null)
+
+    let deployMessage = $state<string>("")
+    let endpointUrl = $derived(PUBLIC_API_GATEWAY_URL + `/${currentProject.slug}/${endpoint.path}`)
 
     // This derived value ensures the editedPath is updated if the endpoint changes
     $effect(() => {
@@ -168,8 +177,6 @@
         goto(`/projects/${currentProject.slug}/${endpoint.path}`)
     }
 
-
-    let deployMessage = $state<string>("")
 
     async function scheduleScrape() {
 
@@ -314,13 +321,47 @@
                                         <Card.Content>
                                             <Editor endpointId={endpoint.id}/>
 
-                                            <Button
-                                                    onclick={scheduleScrape}
-                                            >
-                                                DEPLOY
-                                            </Button>
-                                            <p>{deployMessage}</p>
+                                            <div class="flex flex-col gap-4 mt-6">
+                                                <h3 class="text-lg font-medium">Deployment</h3>
 
+                                                <div class="flex flex-wrap gap-3 items-end">
+                                                    <Button onclick={scheduleScrape} class="flex-shrink-0">
+                                                        DEPLOY
+                                                    </Button>
+
+                                                    <div class="relative flex-grow max-w-md">
+                                                        <Label for="deployment-link" class="text-secondary-foreground">Endpoint link</Label>
+                                                        <Input
+                                                                type="text"
+                                                                name="deployment-link"
+                                                                id="deployment-link"
+                                                                value={endpointUrl}
+                                                                disabled
+                                                                class="pr-20"
+                                                                placeholder="Deploy to generate URL"
+                                                        />
+                                                        <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                class="absolute right-1 top-2/3 -translate-y-1/2"
+                                                                onclick={() => {
+                        if (!endpointUrl) return;
+                        navigator.clipboard.writeText(endpointUrl);
+                        toast.success("URL copied to clipboard");
+                    }}
+                                                                disabled={!endpointUrl}
+                                                        >
+                                                            <Copy class="h-4 w-4"/>
+                                                        </Button>
+                                                    </div>
+
+                                                    {#if deployMessage}
+                                                        <div class="text-sm text-green-600 max-w-xs">
+                                                            {deployMessage}
+                                                        </div>
+                                                    {/if}
+                                                </div>
+                                            </div>
                                         </Card.Content>
                                     </Card.Root>
 
