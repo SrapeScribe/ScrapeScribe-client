@@ -16,7 +16,6 @@
     import {getMethodStyle} from "$lib/utils"
 	import Editor from './instruction-editor/Editor.svelte';
 	import { authApiClient } from '$lib/api/client';
-    import SelectModal from "$lib/components/instruction-editor/SelectModal.svelte"
 
     let props = $props<{
         currentProject: Project,
@@ -180,10 +179,6 @@
                     {endpoint.method}
                 </span>
                 <span class="max-w-[300px] text-gray-700 truncate">
-                            <!--Mock Path-->
-                    {currentProject.slug}.scrapescribe.oi/
-                        </span>
-                <!--Mock Path-->
                 <input
                         type="text"
                         class="py-1 pl-2 rounded-sm bg-white outline-none flex-grow"
@@ -226,8 +221,7 @@
                             {endpoint.method}
                         </span>
                         <span class="max-w-[300px] text-md text-gray-700 truncate">
-                            <!--Mock Path-->
-                            {currentProject.slug}.scrapescribe.oi/{endpoint.path}
+                           {endpoint.path}
                         </span>
                         <span class={endpoint.is_active ? 'text-green-600 ml-auto' : 'text-gray-400 ml-auto'}>
                             {isTogglingStatus ? '⏳' : endpoint.is_active ? '✓' : '○'}
@@ -274,8 +268,6 @@
                                     </Card.Header>
 
                                     <Card.Content>
-                                        <SelectModal />
-
                                         <Editor endpointId={endpoint.id} />
 
                                         <Button
