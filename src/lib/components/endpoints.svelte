@@ -1,10 +1,11 @@
 <script lang="ts">
-    import { cn } from '$lib/utils.js'
+    import {cn, validatePath} from '$lib/utils.js'
     import EndpointCard from './endpoint-card.svelte'
     import { endpointStore } from "$lib/states/endpoint.svelte.js"
     import { projectStore } from "$lib/states/project.svelte"
     import * as Alert from '$lib/components/ui/alert/index.js'
     import { CircleAlert } from 'lucide-svelte'
+    import {toast} from "svelte-sonner"
 
     let props = $props<{
         class?: string;
@@ -39,12 +40,12 @@
 
         const { method, path, description } = newEndpoint
 
-        if (!path.trim()) {
-            formError = "Endpoint path is required"
+        const validationError = validatePath(path)
+        if (validationError) {
+            formError = validationError
             return
         }
 
-        console.log(`Endpoints: Creating new endpoint ${method} ${path} for project ${projectData.id}`)
         formError = null
         isCreating = true
 
@@ -56,7 +57,12 @@
                 description.trim() || undefined
             )
 
-            console.log("Endpoints: Endpoint created successfully")
+            setTimeout(() => {
+                toast.success(`Endpoint: ${method} ${path}`, {
+                    duration: 3000,
+                    description: `Was created successfully for project ${projectData.name} `,
+                })
+            }, 200)
 
             // Reset form
             newEndpoint = {
@@ -67,6 +73,11 @@
             showEndpointForm = false
         } catch (err) {
             console.error("Endpoints: Failed to create endpoint", err)
+            setTimeout(() => {
+                toast.error(`Failed to create endpoint. Please try again.`, {
+                    duration: 3000,
+                })
+            }, 200)
             formError = err instanceof Error
                 ? err.message
                 : 'Failed to create endpoint'
@@ -76,7 +87,6 @@
     }
 
     function toggleEndpointForm() {
-        console.log(`Endpoints: ${showEndpointForm ? 'Hiding' : 'Showing'} endpoint form`)
         showEndpointForm = !showEndpointForm
 
         if (!showEndpointForm) {
@@ -116,7 +126,7 @@
             <!-- New Endpoint Form -->
             {#if showEndpointForm}
                 <form onsubmit={createEndpoint} class="bg-gray-50 p-4 rounded-lg mb-6 border">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label for="method" class="block text-sm font-medium text-gray-700 mb-1">
                                 Method
@@ -134,14 +144,11 @@
                                 <option value="PATCH">PATCH</option>
                             </select>
                         </div>
-                        <div>
+                        <div class="md:col-span-3">
                             <label for="path" class="block text-sm font-medium text-gray-700 mb-1">
                                 Path
                             </label>
                             <div class="flex items-center gap-0.5">
-                                {#if projectData !== null}
-                                    <span>{projectData.slug}.scrapescribe.cloud/</span>
-                                {/if}
                                 <input
                                         name="path"
                                         type="text"
@@ -152,7 +159,7 @@
                             </div>
 
                         </div>
-                        <div class="md:col-span-2">
+                        <div class="md:col-span-4">
                             <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
                                 Description (optional)
                             </label>

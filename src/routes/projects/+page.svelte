@@ -1,10 +1,11 @@
 <script lang="ts">
-    import { onMount } from 'svelte'
-    import { goto } from '$app/navigation'
-    import { projectStore } from "$lib/states/project.svelte"
-    import { endpointStore } from "$lib/states/endpoint.svelte.js"
+    import {onMount} from 'svelte'
+    import {goto} from '$app/navigation'
+    import {projectStore} from "$lib/states/project.svelte"
+    import {endpointStore} from "$lib/states/endpoint.svelte.js"
     import * as Alert from '$lib/components/ui/alert/index.js'
-    import { CircleAlert } from 'lucide-svelte'
+    import {CircleAlert} from 'lucide-svelte'
+    import {toast} from "svelte-sonner"
 
     let newProjectName = $state('')
     let isCreating = $state(false)
@@ -31,21 +32,34 @@
     }
 
     async function createProject() {
-        if (!newProjectName.trim()) {
+        const name = newProjectName.trim()
+
+        if (!name) {
             createError = 'Project name cannot be empty'
             return
         }
 
         createError = null
         isCreating = true
-        console.log(`Projects page: Creating new project "${newProjectName}"`)
 
         try {
-            await projectStore.addProject(newProjectName.trim())
-            console.log('Projects page: Project created successfully')
+            await projectStore.addProject(name)
+
+            setTimeout(() => {
+                toast.success(`Project: ${name}`, {
+                    duration: 3000,
+                    description: `Was created successfully `,
+                })
+            }, 200)
+
             newProjectName = ''
         } catch (err) {
             console.error('Projects page: Failed to create project:', err)
+            setTimeout(() => {
+                toast.info(`Failed to create project. Please try again.`, {
+                    duration: 3000,
+                })
+            }, 200)
             createError = err instanceof Error ? err.message : 'Failed to create project'
         } finally {
             isCreating = false
@@ -53,15 +67,25 @@
     }
 
     async function deleteProject(projectId: string, projectName: string) {
+        // TODO: Replace with a fancy dialog
         if (!confirm(`Are you sure you want to delete "${projectName}"? This action cannot be undone.`)) return
 
-        console.log(`Projects page: Deleting project ${projectId} (${projectName})`)
         try {
             await projectStore.removeProject(projectId)
-            console.log('Projects page: Project deleted successfully')
+
+            setTimeout(() => {
+                toast.info(`Project: ${projectName}`, {
+                    duration: 3000,
+                    description: `Was deleted successfully `,
+                })
+            }, 200)
+
         } catch (err) {
-            console.error('Projects page: Failed to delete project:', err)
-            alert('Failed to delete project. Please try again.')
+            setTimeout(() => {
+                toast.error(`Failed to delete project. Please try again.`, {
+                    duration: 3000,
+                })
+            }, 200)
         }
     }
 
@@ -82,7 +106,7 @@
 
     {#if storeError}
         <Alert.Root variant="destructive" class="mb-4">
-            <CircleAlert class="size-4" />
+            <CircleAlert class="size-4"/>
             <Alert.Title>Error</Alert.Title>
             <Alert.Description>{storeError}</Alert.Description>
         </Alert.Root>

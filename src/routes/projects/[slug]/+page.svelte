@@ -6,6 +6,7 @@
     import * as Alert from '$lib/components/ui/alert/index.js'
     import { CircleAlert } from 'lucide-svelte'
     import type { PageProps } from "./$types"
+    import {toast} from "svelte-sonner"
 
     const { data }: PageProps = $props()
 
@@ -76,8 +77,6 @@
             return
         }
 
-        console.log(`Project detail: Updating project name from "${projectData.name}" to "${name}"`)
-
         try {
             await projectStore.updateProject({
                 project: {
@@ -86,11 +85,20 @@
                 }
             })
 
-            console.log("Project detail: Project name updated successfully")
+            setTimeout(() => {
+                toast.info(`Project name was updated successfully`, {
+                    duration: 3000,
+                    description: `${projectData.name}  ➡  ${name} `,
+                })
+            }, 200)
             isEditingName = false
             updateError = null
         } catch (err) {
-            console.error("Project detail: Failed to update project name", err)
+            setTimeout(() => {
+                toast.error(`Failed to update project name. Please try again.`, {
+                    duration: 3000,
+                })
+            }, 200)
             updateError = err instanceof Error
                 ? err.message
                 : 'Failed to update project name'
