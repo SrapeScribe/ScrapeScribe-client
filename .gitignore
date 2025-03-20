@@ -10,3 +10,4 @@ target
 
 #Testing purpose file
 src/routes/tester/**
+build
