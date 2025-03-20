@@ -15,6 +15,13 @@
     import * as Dialog from '$lib/components/ui/dialog'
     import {CheckCircle} from 'lucide-svelte'
     import {getTimeAgo} from "$lib/utils"
+    import Toolbar from "./Toolbar.svelte"
+
+    let currentTool = $state<'select' | 'click'>('select');
+
+    function handleToolChange(event: CustomEvent<{tool: 'select' | 'click'}>) {
+        currentTool = event.detail.tool;
+    }
 
     // Create a reactive timestamp string that updates automatically
     let savedTimeDisplay = $derived(() => {
@@ -275,9 +282,13 @@
                             </Dialog.Description>
                         </Dialog.Header>
 
+                        <div class="mt-2 mb-4">
+                            <Toolbar bind:currentTool on:toolChange={handleToolChange} />
+                        </div>
+
                         <div class="mt-2 mb-4 overflow-auto max-h-[70vh]">
                             {#if html}
-                                <WebpageEmbed pageContent={html}/>
+                                <WebpageEmbed pageContent={html} bind:currentTool />
                             {:else}
                                 <div class="py-20 text-center text-gray-400">No content loaded</div>
                             {/if}

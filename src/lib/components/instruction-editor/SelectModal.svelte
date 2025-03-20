@@ -2,6 +2,7 @@
     import { Button } from "$lib/components/ui/button/index.js";
     import * as Dialog from "$lib/components/ui/dialog";
     import WebpageEmbed from "./WebpageEmbed.svelte";
+    import Toolbar from "../toolbar.svelte";
     import { selectionMode, startSelection, endSelection } from "./lib/selectionMode.svelte";
 
     let { pageContent, url, onElementSelected } = $props<{
@@ -11,6 +12,7 @@
     }>();
 
     let open = $state(false);
+    let currentTool = $state<'select' | 'click'>('select');
 
     // close when selection is complete
     $effect(() => {
@@ -19,11 +21,16 @@
         }
     });
 
-    function handleSelectionStart(type: 'STRING') {
+    function handleSelectionStart(type: 'STRING' | 'LIST') {
         open = true;
+        currentTool = 'select'; // Ensure we're in select mode
         startSelection(type, (element) => {
             onElementSelected(element);
         });
+    }
+
+    function handleToolChange(event: CustomEvent<{tool: 'select' | 'click'}>) {
+        currentTool = event.detail.tool;
     }
 </script>
 
@@ -44,9 +51,13 @@
             </Dialog.Description>
         </Dialog.Header>
 
-        <div class="mt-2 mb-4 overflow-auto max-h-[70vh]">
+        <div class="mt-2 mb-4">
+            <Toolbar bind:currentTool on:toolChange={handleToolChange} />
+        </div>
+
+        <div class="overflow-auto max-h-[60vh]">
             {#if pageContent}
-                <WebpageEmbed {pageContent} />
+                <WebpageEmbed {pageContent} bind:currentTool />
             {:else}
                 <div class="py-20 text-center text-gray-400">No content loaded</div>
             {/if}
@@ -54,9 +65,9 @@
 
         <Dialog.Footer>
             <Button variant="outline" onclick={() => {
-        endSelection();
-        open = false;
-      }}>Cancel</Button>
+                endSelection();
+                open = false;
+            }}>Cancel</Button>
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>
