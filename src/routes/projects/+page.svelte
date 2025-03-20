@@ -4,7 +4,9 @@
     import {projectStore} from "$lib/states/project.svelte"
     import {endpointStore} from "$lib/states/endpoint.svelte.js"
     import * as Alert from '$lib/components/ui/alert/index.js'
-    import {CircleAlert} from 'lucide-svelte'
+    import * as AlertDialog from "$lib/components/ui/alert-dialog/index.js"
+    import {Button, buttonVariants} from "$lib/components/ui/button/index.js"
+    import {CircleAlert, Trash2} from 'lucide-svelte'
     import {toast} from "svelte-sonner"
     import ProjectSorter from "$lib/components/project-sorter.svelte"
 
@@ -13,6 +15,11 @@
     let createError = $state<string | null>(null)
     let sortField = $state<string>("updated_at") // Default sort by updated_at
     let sortDirection = $state<"asc" | "desc">("desc") // Default direction descending
+
+    // delete confirmation dialog
+    let projectToDelete = $state<{id: string, name: string} | null>(null)
+    let isDeleting = $state(false)
+    let dialogOpen = $state(false)
 
     // Derived values from store
     let projectsData = $derived(projectStore.projects)
@@ -69,26 +76,41 @@
         }
     }
 
-    async function deleteProject(projectId: string, projectName: string) {
-        // TODO: Replace with a fancy dialog
-        if (!confirm(`Are you sure you want to delete "${projectName}"? This action cannot be undone.`)) return
+    function openDeleteDialog(projectId: string, projectName: string) {
+        projectToDelete = { id: projectId, name: projectName };
+        dialogOpen = true;
+    }
+
+    function closeDeleteDialog() {
+        projectToDelete = null;
+        dialogOpen = false;
+    }
+
+    async function confirmDeleteProject() {
+        if (!projectToDelete) return;
+
+        isDeleting = true;
+        const { id, name } = projectToDelete;
 
         try {
-            await projectStore.removeProject(projectId)
+            await projectStore.removeProject(id);
 
             setTimeout(() => {
-                toast.info(`Project: ${projectName}`, {
+                toast.info(`Project: ${name}`, {
                     duration: 3000,
-                    description: `Was deleted successfully `,
+                    description: `Was deleted successfully`,
                 })
-            }, 200)
+            }, 200);
 
+            closeDeleteDialog();
         } catch (err) {
             setTimeout(() => {
                 toast.error(`Failed to delete project. Please try again.`, {
                     duration: 3000,
                 })
-            }, 200)
+            }, 200);
+        } finally {
+            isDeleting = false;
         }
     }
 
@@ -155,15 +177,11 @@
                                 <div class="flex justify-between items-start">
                                     <h3 class="text-lg font-semibold">{project.name}</h3>
                                     <button
-                                            onclick={() => deleteProject(project.id, project.name)}
+                                            onclick={() => openDeleteDialog(project.id, project.name)}
                                             class="text-red-500 hover:text-red-700"
                                             aria-label="Delete project"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                             viewBox="0 0 24 24"
-                                             fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                                        </svg>
+                                        <Trash2 size={16} />
                                     </button>
                                 </div>
                                 <span class="text-gray-400 text-sm">Slug: {project.slug}</span>
@@ -204,4 +222,32 @@
             <p class="text-sm text-gray-500 mt-2">Create your first project using the form above.</p>
         </div>
     {/if}
+
+    <!-- Delete confirmation dialog -->
+    <AlertDialog.Root bind:open={dialogOpen}>
+        <AlertDialog.Content>
+            <AlertDialog.Header>
+                <AlertDialog.Title>Delete Project</AlertDialog.Title>
+                <AlertDialog.Description>
+                    {#if projectToDelete}
+                        Are you sure you want to delete <strong class="font-semibold">{projectToDelete.name}</strong>? This action cannot be undone and will permanently delete the project and all associated endpoints.
+                    {:else}
+                        Are you sure you want to delete this project? This action cannot be undone.
+                    {/if}
+                </AlertDialog.Description>
+            </AlertDialog.Header>
+            <AlertDialog.Footer>
+                <AlertDialog.Cancel onclick={closeDeleteDialog} disabled={isDeleting}>
+                    Cancel
+                </AlertDialog.Cancel>
+                <AlertDialog.Action
+                        onclick={confirmDeleteProject}
+                        disabled={isDeleting}
+                        class={buttonVariants({ variant: "destructive" })}
+                >
+                    {isDeleting ? 'Deleting...' : 'Delete'}
+                </AlertDialog.Action>
+            </AlertDialog.Footer>
+        </AlertDialog.Content>
+    </AlertDialog.Root>
 </div>
