@@ -8,30 +8,19 @@
     import {onMount} from "svelte"
     import {goto} from "$app/navigation"
     import {authStore} from "$lib/states/auth.svelte"
+    import {isPublicRoute, isProtectedRoute} from "$lib/route-protection"
 
     let {children} = $props()
 
     const initState = $derived(authStore.initState)
     const authState = $derived(authStore.authState)
 
-    // TODO: Computed error message
-    // const errorMessage = $derived(getErrorMessage(new Error(initState.error)));
-
     let isInitializing = $state(true)
+    let needsRedirect = $state(false)
 
-    // list of public routes TODO: move to a separate file and make global
-    const publicRoutes = ['/sign-in', '/sign-up', '/auth', '/', '/demo', '/about']
-
-    const isPublicRoute = $derived(() => {
-        return publicRoutes.some(route =>
-            page.url.pathname === route ||
-            page.url.pathname.startsWith(route + '/')
-        )
-    })
-
-    const shouldRedirect = $derived(
-        initState.isInitialized && !initState.isLoading && !authState.isAuthenticated && !authState.isLoading
-    )
+    const currentRoute = $derived(page.url.pathname)
+    const isCurrentRoutePublic = $derived(isPublicRoute(currentRoute))
+    const isCurrentRouteProtected = $derived(isProtectedRoute(currentRoute))
 
     onMount(async () => {
         console.log("📍 Root layout mounted, initializing auth")
@@ -43,44 +32,14 @@
         } finally {
             isInitializing = false
             console.log("📍 isInitializing set to false in layout")
+
+            // Check if redirect is needed after auth is initialized
+            if (isCurrentRouteProtected && !authState.isAuthenticated) {
+                needsRedirect = true
+                setTimeout(() => goto('/sign-in'), 1000)
+            }
         }
     })
-
-    $effect(() => {
-        if (shouldRedirect) {
-            console.log("📍 Not authenticated and on protected route, redirecting")
-            handleRedirect()
-        }
-    })
-
-    // TODO:Function to handle error dismissal
-    function clearInitError() {
-        authStore.clearErrors()
-    }
-
-    function getErrorMessage(error: Error | null): string {
-        if (!error) return ''
-
-        if (error.name === 'User needs to be authenticated') {
-            return isPublicRoute()
-                ? ''
-                : 'Your session has expired. Please sign in again.'
-        }
-
-        if (error.name === 'configuration') {
-            return 'Authentication service configuration issue. Please contact support.'
-        }
-
-        return error.message
-    }
-
-    function handleRedirect() {
-        setTimeout(() => {
-            goto('/sign-in')
-        }, 1000)
-    }
-
-
 </script>
 
 {#if isInitializing || initState.isLoading}
@@ -88,55 +47,35 @@
         <p>Initializing application...</p>
     </div>
 {:else}
-    {#if isPublicRoute()}
-        <!-- Public routes - minimal layout without sidebar -->
-        <div class="flex flex-col min-h-screen">
-            <main class="flex-grow p-4">
-                <!--TODO: Add error message component-->
-                <!--{#if errorMessage}-->
-                <!--    <ErrorMessage-->
-                <!--            message={errorMessage}-->
-                <!--            dismissable={true}-->
-                <!--            autoDismiss={true}-->
-                <!--            type="error"-->
-                <!--    />-->
-                <!--{/if}-->
-
-                {@render children?.()}
-                <Toaster richColors/>
-            </main>
-        </div>
-    {:else if authState.isAuthenticated}
-        <!-- Only show full layout for authenticated users on protected routes -->
-        <Provider>
-            <AppSidebar/>
-            <div class="flex flex-col w-full">
-                <Navbar/>
-                <main class="p-4">
-                    <!-- TODO: Add error message component-->
-
-                    <!--{#if errorMessage}-->
-                    <!--    <ErrorMessage-->
-                    <!--            message={errorMessage}-->
-                    <!--            dismissable={true}-->
-                    <!--            autoDismiss={true}-->
-                    <!--            type="error"-->
-                    <!--    />-->
-                    <!--{/if}-->
-
+    {#if isCurrentRoutePublic || authState.isAuthenticated}
+        {#if isCurrentRoutePublic}
+            <!-- Simple layout for public routes -->
+            <div class="flex flex-col min-h-screen">
+                <main class="flex-grow p-4">
                     {@render children?.()}
                     <Toaster richColors/>
                 </main>
             </div>
-        </Provider>
-    {:else}
+        {:else}
+            <!-- Full authenticated layout with sidebar -->
+            <Provider>
+                <AppSidebar/>
+                <div class="flex flex-col w-full">
+                    <Navbar/>
+                    <main class="p-4">
+                        {@render children?.()}
+                        <Toaster richColors/>
+                    </main>
+                </div>
+            </Provider>
+        {/if}
+    {:else if needsRedirect}
         <!-- Show redirect message for unauthenticated users on protected routes -->
         <div class="flex flex-col min-h-screen">
             <main class="flex-grow p-4">
                 <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
                     <p>Authentication required. Redirecting to sign in...</p>
                 </div>
-                <Toaster richColors/>
             </main>
         </div>
     {/if}
