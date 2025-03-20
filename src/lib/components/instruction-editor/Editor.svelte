@@ -206,7 +206,6 @@
         }
     }
 
-
     onMount(async () => {
         window.addEventListener("refresh", handleUpdate)
         wasmModule = await import('../../../wasm/scraping-instructions/pkg')
@@ -230,12 +229,12 @@
 </script>
 
 {#if instructions}
-    <div class="space-y-4">
-        <div class="flex justify-between items-center">
+    <div class="space-y-4 max-w-full">
+        <div class="flex justify-between items-center flex-wrap gap-2">
             <h3 class="text-lg font-medium">Scraping Instructions</h3>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-shrink-0">
                 {#if lastSaved}
-                    <div class="flex items-center text-sm text-gray-500">
+                    <div class="flex items-center text-sm text-gray-500 flex-shrink-0">
                         {#if hasUnsavedChanges}
                             {#if saveCountdown > 0}
                                 <span class="text-orange-500">Saving in {saveCountdown}s...</span>
@@ -260,13 +259,14 @@
 
         <div class="space-y-2">
             <label class="text-sm font-medium">Target URL:</label>
-            <div class="flex gap-2">
+            <div class="flex gap-2 flex-wrap">
                 <Input
                         type="text"
                         bind:value={instructions.url}
                         placeholder="https://example.com"
+                        class="flex-grow min-w-[200px]"
                 />
-                <Button variant="outline" onclick={handleUrlChange} disabled={!instructions.url}>
+                <Button variant="outline" onclick={handleUrlChange} disabled={!instructions.url} class="flex-shrink-0">
                     Fetch
                 </Button>
             </div>
@@ -274,7 +274,7 @@
 
         <div class="space-y-2">
             <label class="text-sm font-medium">Instructions Schema:</label>
-            <div class="p-4 border rounded-md bg-gray-50">
+            <div class="p-4 border rounded-md bg-gray-50 overflow-x-auto">
                 <Dialog.Root bind:open={modalOpen}>
                     <SchemeView
                             bind:scheme={instructions.scheme}
@@ -297,7 +297,7 @@
                             <Toolbar bind:currentTool on:toolChange={handleToolChange} />
                         </div>
 
-                        <div class="mt-2 mb-4 overflow-auto max-h-[70vh]">
+                        <div class="mt-2 mb-4 overflow-auto max-h-[60vh]">
                             {#if html}
                                 <WebpageEmbed pageContent={html} bind:currentTool />
                             {:else}

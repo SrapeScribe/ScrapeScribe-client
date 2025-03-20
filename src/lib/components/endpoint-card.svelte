@@ -19,7 +19,6 @@
     import {Input} from '$lib/components/ui/input'
     import {Label} from '$lib/components/ui/label'
 
-
     import {PUBLIC_API_GATEWAY_URL} from "$env/static/public"
 
     let props = $props<{
@@ -52,7 +51,6 @@
     let deployTimer = $state<number | null>(null)
 
     let endpointUrl = $derived(PUBLIC_API_GATEWAY_URL + `/${currentProject.slug}/${endpoint.path}`)
-
 
     let lastDeployedTimeDisplay = $derived(() => {
         if (!lastDeployed) return ''
@@ -320,7 +318,7 @@
     })
 </script>
 
-<div class={` ${className}`}>
+<div class={`${className} mb-4`}>
     {#if pathError}
         <Alert.Root variant="destructive" class="mb-4">
             <CircleAlert class="size-4"/>
@@ -328,8 +326,6 @@
         </Alert.Root>
     {/if}
     <div class="flex gap-2 rounded-lg">
-
-
         {#if isEditingPath}
             <div class="path-editor flex flex-col gap-2 w-full ">
                 <div class="flex items-center gap-2 bg-slate-100 rounded-lg p-3 h-14">
@@ -353,8 +349,6 @@
                         <span class="text-gray-500 animate-pulse">Saving...</span>
                     {/if}
                 </div>
-
-
             </div>
         {:else}
             <Accordion.Root
@@ -386,11 +380,10 @@
                     <Accordion.Content class="pt-4" forceMount={true}>
                         {#snippet child({props: contentProps, open, close})}
                             {#if open}
-                                <div {...contentProps} transition:slide={{ duration: 200 }}>
-
+                                <!-- This is the scrollable content container -->
+                                <div {...contentProps} transition:slide={{ duration: 200 }} class="overflow-hidden">
                                     <!--Card for all content inside the accordion-->
                                     <Card.Root class="w-full">
-
                                         <Card.Header>
                                             <div class="flex justify-between items-center mb-4">
                                                 <h4 class="text-lg font-medium">{endpoint.description || 'No description'}</h4>
@@ -421,8 +414,11 @@
                                             {/if}
                                         </Card.Header>
 
-                                        <Card.Content>
-                                            <Editor endpointId={endpoint.id}/>
+                                        <Card.Content class="overflow-auto max-h-[80vh]">
+                                            <!-- Editor component wrapped in scrollable container -->
+                                            <div class="overflow-auto">
+                                                <Editor endpointId={endpoint.id}/>
+                                            </div>
 
                                             <div class="mt-8 p-4 border rounded-md bg-gray-50">
                                                 <div class="flex items-center justify-between mb-4">
@@ -483,7 +479,7 @@
                                                                         id="deployment-link"
                                                                         value={endpointUrl}
                                                                         readonly
-                                                                        class="pr-10 font-mono text-sm"
+                                                                        class="pr-10 font-mono text-sm text-ellipsis"
                                                                         placeholder="Deploy to generate URL"
                                                                 />
                                                                 <Button
@@ -518,7 +514,6 @@
                                             </div>
                                         </Card.Content>
                                     </Card.Root>
-
                                 </div>
                             {/if}
                         {/snippet}
