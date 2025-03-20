@@ -6,10 +6,13 @@
     import * as Alert from '$lib/components/ui/alert/index.js'
     import {CircleAlert} from 'lucide-svelte'
     import {toast} from "svelte-sonner"
+    import ProjectSorter from "$lib/components/project-sorter.svelte"
 
     let newProjectName = $state('')
     let isCreating = $state(false)
     let createError = $state<string | null>(null)
+    let sortField = $state<string>("updated_at") // Default sort by updated_at
+    let sortDirection = $state<"asc" | "desc">("desc") // Default direction descending
 
     // Derived values from store
     let projectsData = $derived(projectStore.projects)
@@ -139,47 +142,62 @@
     {#if isLoading}
         <div class="text-center py-8">Loading projects...</div>
     {:else if projectsData.length > 0}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {#each projectsData as project (project.id)}
-                <div class="bg-white p-4 rounded shadow-md hover:shadow-lg transition">
-                    <div class="mb-3">
-                        <div class="flex justify-between items-start">
-                            <h3 class="text-lg font-semibold">{project.name}</h3>
+        <ProjectSorter
+                bind:projects={projectStore.projects}
+                bind:sortField
+                bind:sortDirection
+        >
+            {#snippet children({sortedProjects})}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {#each sortedProjects as project (project.id)}
+                        <div class="bg-white p-4 rounded shadow-md hover:shadow-lg transition">
+                            <div class="mb-3">
+                                <div class="flex justify-between items-start">
+                                    <h3 class="text-lg font-semibold">{project.name}</h3>
+                                    <button
+                                            onclick={() => deleteProject(project.id, project.name)}
+                                            class="text-red-500 hover:text-red-700"
+                                            aria-label="Delete project"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                             viewBox="0 0 24 24"
+                                             fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <span class="text-gray-400 text-sm">Slug: {project.slug}</span>
+                            </div>
+
+                            <div class="mb-4">
+                                <p class="text-sm text-gray-600">
+                                    <span class="font-medium">Endpoints:</span> {project.endpoint_count}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    <span class="font-medium">Status:</span>
+                                    <span class={project.status === 'active' ? 'text-green-600' : 'text-yellow-600'}>
+                                        {project.status}
+                                    </span>
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    <span class="font-medium">Created:</span> {new Date(project.created_at).toLocaleString()}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    <span class="font-medium">Updated:</span> {new Date(project.updated_at).toLocaleString()}
+                                </p>
+                            </div>
+
                             <button
-                                    onclick={() => deleteProject(project.id, project.name)}
-                                    class="text-red-500 hover:text-red-700"
-                                    aria-label="Delete project"
+                                    onclick={() => navigateToProject(project.slug, project.name)}
+                                    class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded transition"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                                </svg>
+                                Open Project
                             </button>
                         </div>
-                        <span class="text-gray-400 text-sm">Slug: {project.slug}</span>
-                    </div>
-
-                    <div class="mb-4">
-                        <p class="text-sm text-gray-600">
-                            <span class="font-medium">Endpoints:</span> {project.endpoint_count}
-                        </p>
-                        <p class="text-sm text-gray-600">
-                            <span class="font-medium">Status:</span>
-                            <span class={project.status === 'active' ? 'text-green-600' : 'text-yellow-600'}>
-                                {project.status}
-                            </span>
-                        </p>
-                    </div>
-
-                    <button
-                            onclick={() => navigateToProject(project.slug, project.name)}
-                            class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded transition"
-                    >
-                        Open Project
-                    </button>
+                    {/each}
                 </div>
-            {/each}
-        </div>
+            {/snippet}
+        </ProjectSorter>
     {:else}
         <div class="bg-gray-100 p-8 text-center rounded-lg">
             <p class="text-lg text-gray-600">You don't have any projects yet.</p>
