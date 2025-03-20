@@ -5,7 +5,7 @@
     import {endpointStore} from "$lib/states/endpoint.svelte.js"
     import {goto} from "$app/navigation"
     import {CircleAlert, Copy} from 'lucide-svelte'
-    import {getMethodStyle, validatePath} from "$lib/utils"
+    import {getMethodStyle, getTimeAgo, validatePath} from "$lib/utils"
     import Editor from './instruction-editor/Editor.svelte'
     import {authApiClient} from '$lib/api/client'
     import {Button} from "$lib/components/ui/button"
@@ -17,7 +17,7 @@
 
     import {toast} from "svelte-sonner"
     import {Input} from '$lib/components/ui/input'
-    import { Label } from '$lib/components/ui/label';
+    import {Label} from '$lib/components/ui/label'
 
 
     import {PUBLIC_API_GATEWAY_URL} from "$env/static/public"
@@ -43,12 +43,39 @@
     let isTogglingStatus = $state(false)
     let statusError = $state<string | null>(null)
 
+    // Deployment state
     let deployMessage = $state<string>("")
+    let lastDeployed = $state<Date | null>(null)
+    let isDeploying = $state(false)
+    let deploymentError = $state<string | null>(null)
+    let deploymentPending = $state(false)
+    let deployTimer = $state<number | null>(null)
+
     let endpointUrl = $derived(PUBLIC_API_GATEWAY_URL + `/${currentProject.slug}/${endpoint.path}`)
+
+
+    let lastDeployedTimeDisplay = $derived(() => {
+        if (!lastDeployed) return ''
+        return getTimeAgo(lastDeployed)
+    })
 
     // This derived value ensures the editedPath is updated if the endpoint changes
     $effect(() => {
         editedPath = endpoint.path
+    })
+
+    // Update the time display periodically
+    $effect.root(() => {
+        const timeUpdateInterval = setInterval(() => {
+            // Force reactivity update by touching the lastDeployed value
+            if (lastDeployed) {
+                lastDeployed = new Date(lastDeployed.getTime())
+            }
+        }, 1000)
+
+        return () => {
+            clearInterval(timeUpdateInterval)
+        }
     })
 
     const startEditing = () => {
@@ -178,16 +205,50 @@
     }
 
 
-    async function scheduleScrape() {
+    // Rate-limited auto-deployment scheduler
+    function scheduleAutoDeploy() {
+        // Mark deployment as pending
+        deploymentPending = true
+
+        // Clear existing timer if there is one
+        if (deployTimer !== null) {
+            clearTimeout(deployTimer)
+        }
+
+        // Set timer to deploy after 1 second
+        deployTimer = setTimeout(() => {
+            // Only deploy if deployment is still pending
+            if (deploymentPending) {
+                // Execute deployment
+                scheduleScrape(true)
+                deploymentPending = false
+            }
+            deployTimer = null
+        }, 1000)
+    }
+
+    async function scheduleScrape(isAuto = false) {
+        // Reset deployment pending flag
+        deploymentPending = false
+
+        // If already deploying, ignore this request
+        if (isDeploying) return
+
+        isDeploying = true
+        deploymentError = null
 
         const endpointName = endpoint.path
-        // could be passed in, isntead of fetched
+        // could be passed in, instead of fetched
         if (!currentProject) {
-            throw new Error('No active project')
+            deploymentError = 'No active project'
+            isDeploying = false
+            return
         }
 
         if (!endpoint) {
-            throw new Error('No endpoint found')
+            deploymentError = 'No endpoint found'
+            isDeploying = false
+            return
         }
 
         try {
@@ -196,25 +257,67 @@
                 throw new Error('No instruction set found for this endpoint')
             }
 
-            const res = await authApiClient.schedulingApi.schedule(currentProject.name, endpointName, instructionSet.url, instructionSet.schema, 'rate(2 minutes)')
-            console.log(res)
-            deployMessage = res.message
+            const res = await authApiClient.schedulingApi.schedule(
+                currentProject.name,
+                endpointName,
+                instructionSet.url,
+                instructionSet.schema,
+                'rate(2 minutes)'
+            )
 
-            // API is too slow, so no delay
-            toast.success(`Endpoint was successfully deployed`, {
-                duration: 3000,
-                description: "Copy the endpoint URL",
-                action: {
-                    label: 'Copy',
-                    onClick: () => {
-                        navigator.clipboard.writeText(res.url)
+            console.log("Deployment response:", res)
+            deployMessage = res.message
+            lastDeployed = new Date()
+
+            if (!isAuto) {
+                toast.success(`Endpoint was successfully deployed`, {
+                    duration: 3000,
+                    description: "Copy the endpoint URL",
+                    action: {
+                        label: 'Copy',
+                        onClick: () => {
+                            navigator.clipboard.writeText(res.url)
+                        }
                     }
-                }
-            })
+                })
+            } else {
+                toast.success(`Endpoint auto-deployed`, {
+                    duration: 2000,
+                })
+            }
         } catch (e) {
-            console.log(e)
+            console.error("Deployment error:", e)
+            deploymentError = e instanceof Error ? e.message : 'Failed to deploy endpoint'
+
+            if (!isAuto) {
+                toast.error(`Deployment failed`, {
+                    duration: 3000,
+                    description: deploymentError
+                })
+            }
+        } finally {
+            isDeploying = false
         }
     }
+
+    function handleInstructionSaved(event: CustomEvent) {
+        if (event.detail?.endpointId === endpoint.id) {
+            console.log("Instruction saved for endpoint", endpoint.id, "- scheduling deployment")
+            scheduleAutoDeploy()
+        }
+    }
+
+    $effect.root(() => {
+        window.addEventListener("instruction-saved", handleInstructionSaved as EventListener)
+
+        return () => {
+            window.removeEventListener("instruction-saved", handleInstructionSaved as EventListener)
+
+            if (deployTimer !== null) {
+                clearTimeout(deployTimer)
+            }
+        }
+    })
 </script>
 
 <div class={` ${className}`}>
@@ -321,45 +424,96 @@
                                         <Card.Content>
                                             <Editor endpointId={endpoint.id}/>
 
-                                            <div class="flex flex-col gap-4 mt-6">
-                                                <h3 class="text-lg font-medium">Deployment</h3>
-
-                                                <div class="flex flex-wrap gap-3 items-end">
-                                                    <Button onclick={scheduleScrape} class="flex-shrink-0">
-                                                        DEPLOY
-                                                    </Button>
-
-                                                    <div class="relative flex-grow max-w-md">
-                                                        <Label for="deployment-link" class="text-secondary-foreground">Endpoint link</Label>
-                                                        <Input
-                                                                type="text"
-                                                                name="deployment-link"
-                                                                id="deployment-link"
-                                                                value={endpointUrl}
-                                                                disabled
-                                                                class="pr-20"
-                                                                placeholder="Deploy to generate URL"
-                                                        />
-                                                        <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                class="absolute right-1 top-2/3 -translate-y-1/2"
-                                                                onclick={() => {
-                        if (!endpointUrl) return;
-                        navigator.clipboard.writeText(endpointUrl);
-                        toast.success("URL copied to clipboard");
-                    }}
-                                                                disabled={!endpointUrl}
-                                                        >
-                                                            <Copy class="h-4 w-4"/>
-                                                        </Button>
-                                                    </div>
-
-                                                    {#if deployMessage}
-                                                        <div class="text-sm text-green-600 max-w-xs">
-                                                            {deployMessage}
+                                            <div class="mt-8 p-4 border rounded-md bg-gray-50">
+                                                <div class="flex items-center justify-between mb-4">
+                                                    <h3 class="text-lg font-medium">Deployment</h3>
+                                                    {#if lastDeployed}
+                                                        <div class="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-md flex items-center">
+                                                            <span class="mr-1">Last deployed:</span>
+                                                            <span class="font-semibold">{lastDeployedTimeDisplay()}</span>
                                                         </div>
                                                     {/if}
+                                                </div>
+
+                                                <div class="grid gap-4 md:grid-cols-[auto_1fr]">
+                                                    <!-- Left section - Action buttons -->
+                                                    <div class="flex flex-col gap-2 justify-end">
+                                                        <Button
+                                                                onclick={() => scheduleScrape(false)}
+                                                                class="min-w-36"
+                                                                variant={deploymentPending ? "outline" : "default"}
+                                                                disabled={isDeploying || !endpoint.is_active}
+                                                        >
+                                                            {#if isDeploying}
+                                                                <span class="flex items-center gap-2">
+                                                                    <span class="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></span>
+                                                                    Deploying...
+                                                                </span>
+                                                            {:else if deploymentPending}
+                                                                <span class="flex items-center gap-2">
+                                                                    <span class="h-2 w-2 bg-orange-500 rounded-full"></span>
+                                                                    Pending...
+                                                                </span>
+                                                            {:else}
+                                                                <span class="flex items-center gap-2">
+                                                                    <span class="h-2 w-2 bg-green-500 rounded-full"></span>
+                                                                    Deploy
+                                                                </span>
+                                                            {/if}
+                                                        </Button>
+
+                                                        {#if !endpoint.is_active}
+                                                            <div class="text-xs text-amber-600 mt-1 bg-amber-50 p-2 rounded-md">
+                                                                You need to activate this endpoint before deploying
+                                                            </div>
+                                                        {/if}
+                                                    </div>
+
+                                                    <!-- Right section - Endpoint URL -->
+                                                    <div class="flex flex-col gap-2">
+                                                        <div class="relative">
+                                                            <Label for="deployment-link"
+                                                                   class="font-medium text-sm mb-1 block">
+                                                                Endpoint URL
+                                                            </Label>
+                                                            <div class="flex">
+                                                                <Input
+                                                                        type="text"
+                                                                        name="deployment-link"
+                                                                        id="deployment-link"
+                                                                        value={endpointUrl}
+                                                                        readonly
+                                                                        class="pr-10 font-mono text-sm"
+                                                                        placeholder="Deploy to generate URL"
+                                                                />
+                                                                <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        class="absolute right-1 top-5"
+                                                                        onclick={() => {
+                                                                            if (!endpointUrl) return;
+                                                                            navigator.clipboard.writeText(endpointUrl);
+                                                                            toast.success("URL copied to clipboard");
+                                                                        }}
+                                                                        disabled={!endpointUrl}
+                                                                        title="Copy to clipboard"
+                                                                >
+                                                                    <Copy class="h-4 w-4"/>
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Status messages -->
+                                                        {#if deploymentError}
+                                                            <div class="text-sm text-red-600 bg-red-50 p-2 rounded-md">
+                                                                {deploymentError}
+                                                            </div>
+                                                        {:else if deployMessage}
+                                                            <div class="text-sm text-green-600 bg-green-50 p-2 rounded-md">
+                                                                {deployMessage}
+                                                            </div>
+                                                        {/if}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </Card.Content>

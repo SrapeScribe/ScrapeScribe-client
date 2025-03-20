@@ -91,6 +91,15 @@
         }
     }
 
+    function dispatchSaveEvent() {
+        const saveEvent = new CustomEvent('instruction-saved', {
+            detail: { endpointId, timestamp: new Date() },
+            bubbles: true,
+            composed: true
+        });
+        window.dispatchEvent(saveEvent);
+    }
+
     async function saveInstructionSet() {
         if (!instructions) return
         isSaving = true
@@ -116,6 +125,8 @@
             lastSaved = new Date()
             hasUnsavedChanges = false
 
+            dispatchSaveEvent()
+
         } catch (err) {
             console.error('error saving instruction set:', err)
         } finally {
@@ -133,7 +144,7 @@
             clearInterval(saveTimer)
         }
 
-        // Schedule actual save after 1 seconds
+        // Schedule actual save after 1 second
         saveTimer = setTimeout(() => {
             saveInstructionSet()
             saveTimer = null
