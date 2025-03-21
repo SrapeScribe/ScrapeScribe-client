@@ -52,7 +52,7 @@
         {#if isCurrentRoutePublic}
             <!-- Simple layout for public routes -->
             <div class="flex flex-col min-h-screen">
-                <main class="flex-grow p-4">
+                <main>
                     {@render children?.()}
                     <Toaster richColors/>
                 </main>

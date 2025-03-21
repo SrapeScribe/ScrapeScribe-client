@@ -2,11 +2,12 @@
     import {onMount} from 'svelte'
     import {goto} from '$app/navigation'
     import {authStore} from '$lib/states/auth.svelte'
-
+    import {Button} from "$lib/components/ui/button"
     import {Input} from "$lib/components/ui/input"
     import {Label} from "$lib/components/ui/label"
-    import {Button} from "$lib/components/ui/button"
-    import * as Card from "$lib/components/ui/card/index.js"
+    import AuthLayout from '$lib/components/auth/auth-layout.svelte'
+    import * as Alert from '$lib/components/ui/alert/index.js'
+    import { CircleAlert } from 'lucide-svelte'
 
     // Form state
     let email = $state('')
@@ -21,19 +22,18 @@
     const signInState = $derived(authStore.signInState)
     const authState = $derived(authStore.authState)
 
-    onMount(async () => {
+    onMount(() => {
         console.log("📍 SignIn component mounted")
     })
 
     $effect(() => {
         // user is already authenticated => redirect to profile
         if (authState.isAuthenticated) {
-            console.log("📍 User already authenticated, redirecting to profile")
-            goto('/profile')
+            goto('/dashboard')
         }
     })
 
-    // Basic validation TODO: replace with zod
+    // Basic validation
     function validateForm(): boolean {
         let isValid = true
 
@@ -77,8 +77,7 @@
             console.log("📍 Sign in result:", success)
 
             if (success) {
-                console.log("📍 Sign in successful, redirecting to profile")
-                await goto('/profile')
+                await goto('/dashboard')
             }
         } finally {
             isSubmitting = false
@@ -99,74 +98,80 @@
 </script>
 
 <svelte:head>
-    <title>Sign In</title>
+    <title>Sign In | ScrapeScribe</title>
 </svelte:head>
 
-<!-- global store loading state -->
-{#if authState.isLoading}
-    <div>Loading authentication state...</div>
-{/if}
-<!-- errors from auth store -->
-{#if signInState.error}
-    <div>
-        <p>{signInState.error}</p>
-    </div>
-{/if}
-<Card.Root class="max-w-md mx-auto px-8 py-4">
-    <Card.Header>
-        <Card.Title class="text-sm font-bold">Sign In</Card.Title>
-        <Card.Description>Log in into your account or <a class="underline" href="/sign-up">create new</a>
-        </Card.Description>
+<AuthLayout title="Sign In to ScrapeScribe" subtitle="Welcome back! Please enter your credentials">
+    {#if signInState.error}
+        <Alert.Root variant="destructive" class="mb-6">
+            <CircleAlert class="size-4" />
+            <Alert.Description>{signInState.error}</Alert.Description>
+        </Alert.Root>
+    {/if}
 
-    </Card.Header>
-    <Card.Content>
-        <form onsubmit={handleSignIn}>
-            <div class="grid gap-4">
-                <div class="flex flex-col space-y-1.5">
-                    <Label for="email">Email</Label>
-                    <Input
-                            type="email"
-                            id="email"
-                            bind:value={email}
-                            oninput={handleEmailChange}
-                            disabled={isSubmitting || signInState.isLoading}
-                            placeholder="Enter your email"
-                    />
-                    {#if emailError}
-                        <p>{emailError}</p>
-                    {/if}
-                </div>
-
-                <div class="flex flex-col space-y-1.5">
-                    <Label for="password">Password</Label>
-                    <Input
-                            type="password"
-                            id="password"
-                            bind:value={password}
-                            oninput={handlePasswordChange}
-                            disabled={isSubmitting || signInState.isLoading}
-                            placeholder="Enter your password"
-                    />
-                    {#if passwordError}
-                        <p>{passwordError}</p>
-                    {/if}
-                </div>
-
-                <Button
-                        type="submit"
-                        disabled={isSubmitting || signInState.isLoading}
-                >
-                    {#if isSubmitting || signInState.isLoading}
-                        Signing In...
-                    {:else}
-                        Sign In
-                    {/if}
-                </Button>
-            </div>
-        </form>
-
-        <div class="mt-3">
-            <a href="/sign-up">Don't have an account? Sign up</a>
+    <form onsubmit={handleSignIn} class="space-y-6">
+        <div>
+            <Label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email address</Label>
+            <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autocomplete="email"
+                    bind:value={email}
+                    oninput={handleEmailChange}
+                    class={emailError ? "border-red-500" : ""}
+                    placeholder="you@example.com"
+                    disabled={isSubmitting || signInState.isLoading}
+            />
+            {#if emailError}
+                <p class="mt-1 text-sm text-red-600">{emailError}</p>
+            {/if}
         </div>
-    </Card.Content>
-</Card.Root>
+
+        <div>
+            <div class="flex items-center justify-between">
+                <Label for="password" class="block text-sm font-medium text-gray-700">Password</Label>
+                <!-- <a href="#" class="text-xs text-blue-600 hover:text-blue-500">Forgot your password?</a> -->
+            </div>
+            <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autocomplete="current-password"
+                    bind:value={password}
+                    oninput={handlePasswordChange}
+                    class={passwordError ? "border-red-500" : ""}
+                    placeholder="••••••••"
+                    disabled={isSubmitting || signInState.isLoading}
+            />
+            {#if passwordError}
+                <p class="mt-1 text-sm text-red-600">{passwordError}</p>
+            {/if}
+        </div>
+
+        <Button
+                type="submit"
+                class="w-full flex justify-center py-2"
+                disabled={isSubmitting || signInState.isLoading}
+        >
+            {#if isSubmitting || signInState.isLoading}
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Signing in...
+            {:else}
+                Sign in
+            {/if}
+        </Button>
+
+        <div class="text-center">
+            <p class="text-sm text-gray-600">
+                Don't have an account?
+                <a href="/sign-up" class="font-medium text-blue-600 hover:text-blue-500">
+                    Sign up
+                </a>
+            </p>
+        </div>
+    </form>
+</AuthLayout>
