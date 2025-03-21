@@ -1,6 +1,6 @@
-import { json } from '@sveltejs/kit'
-import type { RequestEvent } from '@sveltejs/kit'
-import { PUBLIC_API_GATEWAY_URL } from '$env/static/public'
+import {json} from '@sveltejs/kit'
+import type {RequestEvent} from '@sveltejs/kit'
+import {PUBLIC_API_GATEWAY_URL} from '$env/static/public'
 
 // Define the lambda request structure
 interface LambdaRequest {
@@ -37,10 +37,10 @@ async function handleRequest(event: RequestEvent) {
         // Validate auth header
         if (!authHeader) {
             return new Response(
-                JSON.stringify({ error: 'Authorization header missing' }),
+                JSON.stringify({error: 'Authorization header missing'}),
                 {
                     status: 401,
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: {'Content-Type': 'application/json'}
                 }
             )
         }
@@ -55,13 +55,46 @@ async function handleRequest(event: RequestEvent) {
             body: JSON.stringify(body)
         })
 
-        // Parse lambda response
-        const lambdaResponse = await response.json()
+        // Check if response is OK
+        if (!response.ok) {
+            const errorText = await response.text()
+            let errorJson
 
-        // Return with appropriate status code
-        return json(lambdaResponse, {
-            status: lambdaResponse.statusCode || 200
-        })
+            try {
+                errorJson = JSON.parse(errorText)
+            } catch (e) {
+                errorJson = {error: errorText || 'Unknown API error'}
+            }
+
+            return json(errorJson, {status: response.status})
+        }
+
+        // Get raw text from response first
+        const responseText = await response.text()
+
+        // Handle empty responses
+        if (!responseText || responseText.trim() === '') {
+            return json(null, {status: 200})
+        }
+
+        // Parse JSON response (or return null if parsing fails)
+        let lambdaResponse
+        try {
+            lambdaResponse = JSON.parse(responseText)
+        } catch (e) {
+            console.warn('Failed to parse Lambda response as JSON:', responseText)
+            return json({data: responseText}, {status: 200})
+        }
+
+        // Safety check: if lambdaResponse is null but the response was OK
+        if (lambdaResponse === null) {
+            return json(null, {status: 200})
+        }
+
+        // Return with appropriate status code (default to 200 if statusCode is missing)
+        const statusCode = lambdaResponse?.statusCode || 200
+
+        return json(lambdaResponse, {status: statusCode})
     } catch (error) {
         console.error('API proxy error:', error)
 

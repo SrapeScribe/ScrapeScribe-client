@@ -5,6 +5,8 @@ target
 .idea
 .env
 .svelte-kit/**
+.DS_Store
+
 
 #Testing purpose file
 src/routes/tester/**

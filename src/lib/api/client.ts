@@ -1,12 +1,6 @@
-import '$lib/aws-amplify'
 import {fetchAuthSession} from "aws-amplify/auth"
-import type {Endpoint, InstructionSet, Project, ProjectWithEndpointCount, User} from "$lib/interfaces"
+import type {Endpoint, InstructionSet, Project, ProjectWithEndpointCount} from "$lib/interfaces"
 import {HTTPMethod} from "$lib/constants"
-
-// Basic error type
-export type ApiError = {
-    error: string
-}
 
 class AuthApiClient {
     private fetch: typeof fetch = typeof window !== 'undefined' ? window.fetch.bind(window) : fetch
@@ -15,21 +9,49 @@ class AuthApiClient {
         if (customFetch) {
             this.fetch = customFetch
         }
+        console.log("🌐 API Client: Initialized")
     }
 
     private async getAuthHeaders(): Promise<Headers> {
-        const {tokens} = await fetchAuthSession()
-        const headers = new Headers()
-        headers.append("Content-Type", "application/json")
-        headers.append(
-            "Authorization",
-            tokens?.idToken?.toString() ?? ""
-        )
-        return headers
+        console.log("🌐 API Client: Getting auth headers")
+        try {
+            const {tokens} = await fetchAuthSession()
+            const headers = new Headers()
+            headers.append("Content-Type", "application/json")
+
+            if (tokens?.idToken) {
+                headers.append("Authorization", tokens.idToken.toString())
+                console.log("🌐 API Client: Auth token obtained successfully")
+            } else {
+                console.warn("🌐 API Client: No ID token available in session")
+            }
+
+            return headers
+        } catch (error) {
+            console.error("🌐 API Client: Error getting auth token", error)
+            throw new Error("Failed to get authentication token. Please sign in again.")
+        }
     }
 
     /**
-     * Execute authenticated request to API
+     * Convert any response to an array format
+     * Handles three cases:
+     * - null → []
+     * - single object → [object]
+     * - array → array (unchanged)
+     */
+    private toArray<T>(response: T | T[] | null): T[] {
+        if (response === null) {
+            return []
+        }
+        if (Array.isArray(response)) {
+            return response
+        }
+        return [response]
+    }
+
+    /**
+     * Execute authenticated request to API with improved error handling
      */
     private async executeRequest<T>(
         type: 'function' | 'procedure',
@@ -38,9 +60,9 @@ class AuthApiClient {
         parameters: any[],
         method: HTTPMethod
     ): Promise<T> {
-        try {
-            console.debug(`${method} ${schema}.${operation}`, parameters)
+        console.log(`🌐 API Client: Executing ${method} request to ${schema}.${operation}`, parameters)
 
+        try {
             // Get auth headers
             const headers = await this.getAuthHeaders()
 
@@ -56,6 +78,8 @@ class AuthApiClient {
                 parameters,
             })
 
+            console.log(`🌐 API Client: Sending ${actualMethod} request to /api/db`)
+
             const requestOptions = {
                 method: actualMethod,
                 headers,
@@ -63,34 +87,113 @@ class AuthApiClient {
                 redirect: "follow" as RequestRedirect,
             }
 
-            const response = await this.fetch("/api/db", requestOptions)
-
-            // Check if response is ok
-            if (!response.ok) {
+            // Execute the request
+            let response: Response
+            try {
+                response = await this.fetch("/api/db", requestOptions)
+            } catch (networkError) {
+                console.error("🌐 API Client: Network error", networkError)
                 throw {
-                    status: response.status,
-                    message: response.statusText || 'Unknown error occurred',
+                    status: 0,
+                    message: "Network connection failed. Please check your internet connection.",
                     operation,
                     parameters
                 }
             }
 
-            const text = await response.text()
+            // Check if response is ok
+            if (!response.ok) {
+                const statusCode = response.status
+                let errorMessage = response.statusText || 'Unknown error occurred'
+
+                // Try to get more detailed error message from response
+                try {
+                    const errorBody = await response.text()
+                    let parsedError
+
+                    try {
+                        parsedError = JSON.parse(errorBody)
+                        if (parsedError.error || parsedError.message) {
+                            errorMessage = parsedError.error || parsedError.message
+                        } else if (typeof parsedError === 'string') {
+                            errorMessage = parsedError
+                        }
+                    } catch (e) {
+                        // If not JSON, use the raw text if it exists
+                        if (errorBody && errorBody.trim()) {
+                            errorMessage = errorBody
+                        }
+                    }
+                } catch (e) {
+                    // Couldn't read error body, stick with status text
+                }
+
+                console.error(`🌐 API Client: Request failed with status ${statusCode}`, errorMessage)
+
+                // Format user-friendly error messages for common status codes
+                if (statusCode === 401) {
+                    errorMessage = "You are not authorized. Please sign in again."
+                } else if (statusCode === 403) {
+                    errorMessage = "You don't have permission to perform this action."
+                } else if (statusCode === 404) {
+                    errorMessage = "The requested resource was not found."
+                } else if (statusCode === 409) {
+                    errorMessage = "This operation caused a conflict, possibly a duplicate resource."
+                } else if (statusCode === 422) {
+                    errorMessage = "The request data is invalid. Please check your inputs."
+                } else if (statusCode >= 500) {
+                    errorMessage = "Server error occurred. Please try again later."
+                }
+
+                throw {
+                    status: statusCode,
+                    message: errorMessage,
+                    operation,
+                    parameters
+                }
+            }
+
+            // Get the response text
+            let responseText
+            try {
+                responseText = await response.text()
+            } catch (error) {
+                console.error("🌐 API Client: Error reading response text", error)
+                throw {
+                    status: response.status,
+                    message: "Failed to read response data",
+                    operation,
+                    parameters
+                }
+            }
 
             // Handle empty response
-            if (!text.trim()) {
+            if (!responseText || !responseText.trim()) {
+                console.log("🌐 API Client: Empty response received")
                 return null as unknown as T
             }
 
             // Parse JSON response
-            const parsed = JSON.parse(text)
+            let parsed
+            try {
+                parsed = JSON.parse(responseText)
+                console.log(`🌐 API Client: Request to ${schema}.${operation} completed successfully`)
+            } catch (error) {
+                console.error("🌐 API Client: Error parsing JSON response", error, responseText)
+                throw {
+                    status: response.status,
+                    message: "Invalid response format from server",
+                    operation,
+                    parameters
+                }
+            }
 
             // For non-GET operations with entity responses, extract the entity
             if (type === 'procedure' && Array.isArray(parsed) && parsed.length > 0) {
                 const result = parsed[0]
 
                 // Check for known response formats and return direct entity
-                for (const key of ['project', 'endpoint', 'instruction_set', 'user_data']) {
+                for (const key of ['project', 'endpoint', 'instruction_set']) {
                     if (result[key]) {
                         return result[key] as T
                     }
@@ -99,13 +202,19 @@ class AuthApiClient {
 
             return parsed as T
         } catch (error: any) {
+            // Ensure we have a properly formatted error
             if (!error.status) {
-                throw {
+                error = {
                     status: 0,
-                    message: error.message || 'Network connection failed',
+                    message: error.message || 'Unknown error occurred',
+                    operation,
+                    parameters,
                     timestamp: new Date().toISOString()
                 }
             }
+
+            // Log and rethrow the error
+            console.error(`🌐 API Client: Error in ${schema}.${operation}`, error)
             throw error
         }
     }
@@ -115,6 +224,15 @@ class AuthApiClient {
      */
     async get<T>(schema: string, operation: string, parameters: any[]): Promise<T> {
         return this.executeRequest<T>('function', schema, operation, parameters, HTTPMethod.GET)
+    }
+
+    /**
+     * Execute a database function that always returns an array
+     * Handles normalization of different response types
+     */
+    async getArray<T>(schema: string, operation: string, parameters: any[]): Promise<T[]> {
+        const response = await this.executeRequest<T | T[] | null>('function', schema, operation, parameters, HTTPMethod.GET)
+        return this.toArray(response)
     }
 
     /**
@@ -139,60 +257,6 @@ class AuthApiClient {
     }
 
     /**
-     * User-related API operations
-     */
-    userApi = {
-        getCurrentUser: () =>
-            this.get<User>(
-                'app_private',
-                'get_current_user',
-                []
-            ),
-
-        getByEmail: (email: string) =>
-            this.get<User>(
-                'app_private',
-                'get_user_by_email',
-                [email]
-            ),
-
-        getByUsername: (username: string) =>
-            this.get<User>(
-                'app_private',
-                'get_user_by_username',
-                [username]
-            ),
-
-        create: (email: string, username: string, name: string, role: string) =>
-            this.post<User>(
-                'app_private',
-                'create_user',
-                [email, username, name, role]
-            ),
-
-        update: (email: string | null = null, username: string | null = null, name: string | null = null, role: string | null = null) =>
-            this.put<User>(
-                'app_private',
-                'update_user',
-                [email, username, name, role]
-            ),
-
-        updateLastLogin: () =>
-            this.put<User>(
-                'app_private',
-                'update_user_last_login_to_now',
-                []
-            ),
-
-        delete: () =>
-            this.delete<User>(
-                'app_private',
-                'delete_user',
-                []
-            )
-    }
-
-    /**
      * Project-related API operations
      */
     projectApi = {
@@ -211,35 +275,14 @@ class AuthApiClient {
             ),
 
         getMyProjects: () =>
-            this.get<Project[]>(
+            this.getArray<Project>(
                 'app_private',
-                'get_projects_by_user_id',
+                'get_projects',
                 []
-            ),
-
-        getAll: () =>
-            this.get<Project[]>(
-                'app_private',
-                'get_projects_by_user_id',
-                []
-            ),
-
-        getMyProjectIds: () =>
-            this.get<{ id: string }[]>(
-                'app_private',
-                'get_project_ids_by_user_id',
-                []
-            ),
-
-        getByContextPath: (contextPath: string) =>
-            this.get<Project>(
-                'app_private',
-                'get_project_by_context_path',
-                [contextPath]
             ),
 
         getWithEndpointCounts: () =>
-            this.get<ProjectWithEndpointCount[]>(
+            this.getArray<ProjectWithEndpointCount>(
                 'app_private',
                 'get_projects_with_endpoint_counts',
                 []
@@ -283,12 +326,12 @@ class AuthApiClient {
                 'app_private',
                 'get_endpoint_by_id',
                 [endpointId]
-            ),
+            ), 
 
         getByProjectId: (projectId: string) =>
-            this.get<Endpoint[]>(
+            this.getArray<Endpoint>(
                 'app_private',
-                'get_project_endpoints',
+                'get_endpoints_by_project',
                 [projectId]
             ),
 
@@ -300,20 +343,32 @@ class AuthApiClient {
             ),
 
         getActive: (projectId: string) =>
-            this.get<Endpoint[]>(
+            this.getArray<Endpoint>(
                 'app_private',
                 'get_active_endpoints',
                 [projectId]
             ),
 
-        create: (projectId: string, method: string, path: string, description: string | null = null, isActive: boolean = true) =>
+        create: (
+            projectId: string,
+            method: string,
+            path: string,
+            description: string | null = null,
+            isActive: boolean = true
+        ) =>
             this.post<Endpoint>(
                 'app_private',
                 'create_endpoint',
                 [projectId, method, path, description, isActive]
             ),
 
-        update: (endpointId: string, method: string | null = null, path: string | null = null, description: string | null = null, isActive: boolean | null = null) =>
+        update: (
+            endpointId: string,
+            method: string | null = null,
+            path: string | null = null,
+            description: string | null = null,
+            isActive: boolean | null = null
+        ) =>
             this.put<Endpoint>(
                 'app_private',
                 'update_endpoint',
@@ -354,24 +409,24 @@ class AuthApiClient {
             ),
 
         getByEndpointId: (endpointId: string) =>
-            this.get<InstructionSet[]>(
+            this.get<InstructionSet>(
                 'app_private',
                 'get_instruction_sets_by_endpoint',
                 [endpointId]
             ),
 
-        create: (endpointId: string, schema: Record<string, any>, isActive: boolean = true) =>
+        create: (endpointId: string, schema: Record<string, any>, url: string | null = null, isActive: boolean = true) =>
             this.post<InstructionSet>(
                 'app_private',
                 'create_instruction_set',
-                [endpointId, schema, isActive]
+                [endpointId, schema, url, isActive]
             ),
 
-        update: (instructionSetId: string, schema: Record<string, any> | null = null, isActive: boolean | null = null) =>
+        update: (instructionSetId: string, schema: Record<string, any> | null = null, url: string | null = null, isActive: boolean | null = null) =>
             this.put<InstructionSet>(
                 'app_private',
                 'update_instruction_set',
-                [instructionSetId, schema, isActive]
+                [instructionSetId, schema, url, isActive]
             ),
 
         delete: (instructionSetId: string) =>
@@ -394,6 +449,32 @@ class AuthApiClient {
                 'move_instruction_set',
                 [instructionSetId, targetEndpointId]
             )
+    }
+
+    // TODO: change how projectName and endpointName are retrieved in the endpoint-card (or here)
+    // this is prob not ideal considering the other methods above but it should do for now
+    schedulingApi = {
+        schedule: async (projectName: string, endpointName: string, url: string, scheme: Record<string, any>, refreshPeriod: string) => {
+            const headers = await this.getAuthHeaders();
+            
+            const response = await this.fetch('https://su577lt3di.execute-api.eu-west-1.amazonaws.com/v1/api/schedule', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    project_name: projectName,
+                    endpoint_name: endpointName,
+                    url: url,
+                    scheme: scheme,
+                    refresh_period: refreshPeriod
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to schedule scrape: ${response.statusText}`);
+            }
+
+            return response.json();
+        }
     }
 }
 

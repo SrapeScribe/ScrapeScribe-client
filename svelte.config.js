@@ -1,4 +1,3 @@
-// import adapter from '@sveltejs/adapter-static';
 import adapter from 'amplify-adapter';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
@@ -9,9 +8,6 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		// adapter: adapter({
-		// 	fallback: '200.html'
-		// })
 		adapter: adapter()
 	}
 };

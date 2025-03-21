@@ -1,98 +1,211 @@
 <script lang="ts">
-    import {type Endpoint, type Instructions, SchemeType} from '$lib/interfaces'
-    import {cn} from '$lib/utils.js'
+    import {cn, validatePath} from '$lib/utils.js'
     import EndpointCard from './endpoint-card.svelte'
-    // import {projectStore} from "$lib/stores"
-    import {HTTPMethod} from "$lib/constants"
+    import { endpointStore } from "$lib/states/endpoint.svelte.js"
+    import { projectStore } from "$lib/states/project.svelte"
+    import * as Alert from '$lib/components/ui/alert/index.js'
+    import { CircleAlert } from 'lucide-svelte'
+    import {toast} from "svelte-sonner"
 
     let props = $props<{
         class?: string;
     }>()
 
-    let {class: className, ...restProps} = props
+    let { class: className, ...restProps } = props
 
+    // State from the endpoint store
+    let endpointsData = $derived(endpointStore.endpoints)
+    let isLoading = $derived(endpointStore.isLoading)
+    let error = $derived(endpointStore.error)
+    let projectData = $derived(projectStore.currentProject)
 
-    let endpoints: Endpoint[] = $state([])
-    let newEndpointName = $state('')
-    let isCreating = $state(false)
-    let createError = $state<string | null>(null)
-
-    projectStore.subscribe((project) => {
-        endpoints = project.endpoints
+    // Form state
+    let showEndpointForm = $state(false)
+    let newEndpoint = $state({
+        method: 'GET',
+        path: '',
+        description: ''
     })
+    let formError: string | null = $state(null)
+    let isCreating = $state(false)
 
-    async function handleCreateEndpoint(e: Event) {
+    async function createEndpoint(e: Event) {
         e.preventDefault()
 
-        if (!newEndpointName.trim() || isCreating) return
+        if (!projectData) {
+            console.error("Endpoints: Cannot create endpoint - no active project")
+            formError = "No active project"
+            return
+        }
 
+        const { method, path, description } = newEndpoint
+
+        const validationError = validatePath(path)
+        if (validationError) {
+            formError = validationError
+            return
+        }
+
+        formError = null
         isCreating = true
-        createError = null
 
         try {
-            // const newEndpoint: Endpoint = {
-            //     id: String(Date.now()),
-            //     name: newEndpointName.trim(),
-            //     project_id: '', //substitute with current project id
-            //     url: '',
-            //     method: HTTPMethod.GET,
-            //     instructions: {
-            //         url: '',
-            //         scheme: {
-            //             type: SchemeType.String,
-            //             path: '',
-            //             mode: 'INNER_HTML'
-            //         }
-            //     } as Instructions,
-            //     refresh_period: 'daily'
-            // }
-            //
-            // await ApiClient.createEndpoint(newEndpoint)
-            //
-            // projectStore.update(project => ({
-            //     ...project,
-            //     endpoints: [...project.endpoints, newEndpoint]
-            // }))
+            await endpointStore.addEndpoint(
+                projectData.id,
+                method,
+                path.trim(),
+                description.trim() || undefined
+            )
 
-            newEndpointName = ''
+            setTimeout(() => {
+                toast.success(`Endpoint: ${method} ${path}`, {
+                    duration: 3000,
+                    description: `Was created successfully for project ${projectData.name} `,
+                })
+            }, 200)
+
+            // Reset form
+            newEndpoint = {
+                method: 'GET',
+                path: '',
+                description: ''
+            }
+            showEndpointForm = false
         } catch (err) {
-            createError = err instanceof Error
+            console.error("Endpoints: Failed to create endpoint", err)
+            setTimeout(() => {
+                toast.error(`Failed to create endpoint. Please try again.`, {
+                    duration: 3000,
+                })
+            }, 200)
+            formError = err instanceof Error
                 ? err.message
                 : 'Failed to create endpoint'
         } finally {
             isCreating = false
         }
     }
+
+    function toggleEndpointForm() {
+        showEndpointForm = !showEndpointForm
+
+        if (!showEndpointForm) {
+            // Reset form when hiding
+            newEndpoint = {
+                method: 'GET',
+                path: '',
+                description: ''
+            }
+            formError = null
+        }
+    }
 </script>
 
 <div class={cn('mx-auto space-y-4 p-4', className)} {...restProps}>
-    {#each endpoints as _, i}
-        <EndpointCard bind:endpoint={endpoints[i]}/>
-    {/each}
+    {#if isLoading}
+        <div class="py-4">Loading endpoints...</div>
+    {:else if error}
+        <Alert.Root variant="destructive" class="mb-4">
+            <CircleAlert class="size-4" />
+            <Alert.Title>Error</Alert.Title>
+            <Alert.Description>{error}</Alert.Description>
+        </Alert.Root>
+    {:else}
+        <div class="pt-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">Endpoints</h3>
+                <button
+                        onclick={toggleEndpointForm}
+                        disabled={isLoading || !projectData}
+                        class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 disabled:bg-blue-300"
+                >
+                    {showEndpointForm ? '➖ Cancel' : '➕ Add Endpoint'}
+                </button>
+            </div>
 
-    <div class="pt-8">
-        <form
-                onsubmit={handleCreateEndpoint}
-                class="flex gap-2 items-center"
-        >
-            <input
-                    type="text"
-                    bind:value={newEndpointName}
-                    placeholder="Name your endpoint..."
-                    class="border rounded p-2 flex-grow focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={isCreating}
-            />
-            <button
-                    type="submit"
-                    class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors"
-                    disabled={isCreating || !newEndpointName.trim()}
-            >
-                {isCreating ? 'Creating...' : 'Create Endpoint'}
-            </button>
-        </form>
+            <!-- New Endpoint Form -->
+            {#if showEndpointForm}
+                <form onsubmit={createEndpoint} class="bg-gray-50 p-4 rounded-lg mb-6 border">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label for="method" class="block text-sm font-medium text-gray-700 mb-1">
+                                Method
+                            </label>
+                            <select
+                                    name="method"
+                                    bind:value={newEndpoint.method}
+                                    class="w-full p-2 border rounded bg-white"
+                                    disabled
+                            >
+                                <option value="GET">GET</option>
+                                <option value="POST">POST</option>
+                                <option value="PUT">PUT</option>
+                                <option value="DELETE">DELETE</option>
+                                <option value="PATCH">PATCH</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-3">
+                            <label for="path" class="block text-sm font-medium text-gray-700 mb-1">
+                                Path
+                            </label>
+                            <div class="flex items-center gap-0.5">
+                                <input
+                                        name="path"
+                                        type="text"
+                                        bind:value={newEndpoint.path}
+                                        class="w-full p-2 border rounded"
+                                        placeholder="resource-name"
+                                />
+                            </div>
 
-        {#if createError}
-            <p class="text-red-500 mt-2">{createError}</p>
+                        </div>
+                        <div class="md:col-span-4">
+                            <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
+                                Description (optional)
+                            </label>
+                            <textarea
+                                    name="description"
+                                    bind:value={newEndpoint.description}
+                                    class="w-full p-2 border rounded"
+                                    placeholder="Description of what this endpoint does"
+                                    rows="2"
+                            ></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex justify-end">
+                        <button
+                                type="submit"
+                                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300"
+                                disabled={isCreating}
+                        >
+                            {isCreating ? 'Creating...' : 'Create Endpoint'}
+                        </button>
+                    </div>
+                </form>
+            {/if}
+
+            {#if formError}
+                <Alert.Root variant="destructive" class="mb-4">
+                    <CircleAlert class="size-4" />
+                    <Alert.Title>Error</Alert.Title>
+                    <Alert.Description>{formError}</Alert.Description>
+                </Alert.Root>
+            {/if}
+        </div>
+
+        <!-- Endpoints list -->
+        {#if projectData && endpointsData.length > 0}
+            {#each endpointsData as endpoint (endpoint.id)}
+                <EndpointCard
+                        endpoint={endpoint}
+                        currentProject={projectData}
+                />
+            {/each}
+        {:else if projectData}
+            <div class="bg-gray-100 p-6 text-center rounded-lg">
+                <p class="text-gray-600">This project doesn't have any endpoints yet.</p>
+                <p class="text-sm text-gray-500 mt-2">Add an endpoint above to get started.</p>
+            </div>
         {/if}
-    </div>
+    {/if}
 </div>
