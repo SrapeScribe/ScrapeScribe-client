@@ -4,7 +4,7 @@
     import {setContext} from "svelte"
     import {endpointStore} from "$lib/states/endpoint.svelte.js"
     import {goto} from "$app/navigation"
-    import {CircleAlert, Copy} from 'lucide-svelte'
+    import {CircleAlert, Copy, ExternalLink} from 'lucide-svelte'
     import {getMethodStyle, getTimeAgo, validatePath} from "$lib/utils"
     import Editor from './instruction-editor/Editor.svelte'
     import {authApiClient} from '$lib/api/client'
@@ -377,7 +377,7 @@
                         </div>
                     </Accordion.Trigger>
 
-                    <Accordion.Content class="pt-4" forceMount={true}>
+                    <Accordion.Content forceMount={true}>
                         {#snippet child({props: contentProps, open, close})}
                             {#if open}
                                 <!-- This is the scrollable content container -->
@@ -479,13 +479,13 @@
                                                                         id="deployment-link"
                                                                         value={endpointUrl}
                                                                         readonly
-                                                                        class="pr-10 font-mono text-sm text-ellipsis"
+                                                                        class="pr-10 mr-4 font-mono text-sm text-ellipsis"
                                                                         placeholder="Deploy to generate URL"
                                                                 />
                                                                 <Button
                                                                         variant="ghost"
                                                                         size="icon"
-                                                                        class="absolute right-1 top-5"
+                                                                        class="absolute right-14 top-[18px]"
                                                                         onclick={() => {
                                                                             if (!endpointUrl) return;
                                                                             navigator.clipboard.writeText(endpointUrl);
@@ -494,9 +494,22 @@
                                                                         disabled={!endpointUrl}
                                                                         title="Copy to clipboard"
                                                                 >
-                                                                    <Copy class="h-4 w-4"/>
+                                                                    <Copy class="h-3 w-3"/>
+                                                                </Button>
+                                                                <Button
+                                                                        variant="default"
+                                                                        size="icon"
+                                                                        onclick={() => {
+                                                                        if (!endpointUrl) return;
+                                                                        window.open(endpointUrl, '_blank')
+                                                                    }}
+                                                                        disabled={!endpointUrl}
+                                                                        title="Open in new tab"
+                                                                >
+                                                                    <ExternalLink class="h-4 w-4"/>
                                                                 </Button>
                                                             </div>
+
                                                         </div>
 
                                                         <!-- Status messages -->
