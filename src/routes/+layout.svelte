@@ -3,6 +3,7 @@
     import {page} from '$app/state'
     import {Provider} from '$lib/components/ui/sidebar/index.js'
     import AppSidebar from '$lib/components/app-sidebar.svelte'
+    import PersistentSidebar from '$lib/components/persistent-sidebar.svelte'
     import Navbar from '$lib/components/navbar.svelte'
     import {Toaster} from 'svelte-sonner'
     import {onMount} from "svelte"
@@ -60,6 +61,7 @@
             <!-- Full authenticated layout with sidebar -->
             <Provider>
                 <AppSidebar/>
+                <PersistentSidebar />
                 <div class="flex flex-col w-full">
                     <Navbar/>
                     <main class="p-4">
