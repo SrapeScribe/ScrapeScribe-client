@@ -35,7 +35,6 @@
     })
 
     $effect(() => {
-        // user is already authenticated => redirect to profile
         if (authState.isAuthenticated) {
             goto('/dashboard')
         }

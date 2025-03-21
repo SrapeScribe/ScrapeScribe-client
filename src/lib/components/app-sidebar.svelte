@@ -23,11 +23,11 @@
                 url: '/endpoints',
                 icon: NotebookText
             },
-            {
-                name: 'Instructions',
-                url: '/instructions',
-                icon: FileJson
-            }
+            // {
+            //     name: 'Instructions',
+            //     url: '/instructions',
+            //     icon: FileJson
+            // }
         ]
     }
 
